@@ -23,8 +23,7 @@ setup(
         "aiostream>=0.4.1",
         "pygbif==0.5.0",
         "pescador>=2.1.0",
-        "aiostream>=0.5.1",
-        "python-dwca-reader"
+        "python-dwca-reader",
         "tqdm"
     ],
     extras_require={

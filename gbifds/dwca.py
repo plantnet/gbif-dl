@@ -1,4 +1,3 @@
-import ipdb
 import pygbif
 from pathlib import Path
 import random
@@ -9,7 +8,7 @@ import asyncio
 import re
 import tempfile
 
-from . import api
+from gbifds import api
 
 from dwca.read import DwCAReader
 from dwca.darwincore.utils import qualname as qn
@@ -23,6 +22,16 @@ def dwca_generator(
     label: str = "speciesKey",
     type: str = 'StillImage'
 ):
+    """[summary]
+
+    Args:
+        dwca_path (str): [description]
+        label (str, optional): [description]. Defaults to "speciesKey".
+        type (str, optional): [description]. Defaults to 'StillImage'.
+
+    Yields:
+        [type]: [description]
+    """
     with DwCAReader(dwca_path) as dwca:
         for row in dwca:
             img_extensions = []
@@ -90,20 +99,26 @@ def _is_doi(identifier: str) -> bool:
     return True
     # return bool(re.match('/^10.\d{4,9}/[-._;()/:A-Z0-9]+$/i', identifier))
 
-def get_data(identifier: str, root: str, dwca_root_path="dwcas"):
+def get_data(identifier: str, dwca_root_path=None):
+    """Generate GBIF items from DOI or GBIF download key
+
+    Args:
+        identifier (str): doi or gbif key
+        dwca_root_path (str, optional): [description]. Defaults to "dwcas".
+
+    Returns:
+        [type]: [description]
+    """
     if _is_doi:
         key = doi_to_gbif_key(identifier)
     else:
         key = identifier
 
-    is_temp = False
-    if root is None:
-        # TODO: tempdir logic
+    if dwca_root_path is None:
         is_temp = True
-        root = tempfile.mkdtemp()
+        dwca_root_path = tempfile.mkdtemp()
 
     # download darwin core archive
-    # TODO: check if path already exists
     dwca_root_path = Path(dwca_root_path)
     dwca_root_path.mkdir(parents=True, exist_ok=True)
     r = pygbif.occurrences.download_get(
@@ -114,9 +129,7 @@ def get_data(identifier: str, root: str, dwca_root_path="dwcas"):
 
     # extract urls images
     gen = dwca_generator(dwca_path=dwca_path)
-    # download urls
-    asyncio.run(api.download(generator=gen, root=root))
-    return root
+
 
 # TODO: use usr_data for tmp
 # TODO: enable delete = True

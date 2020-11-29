@@ -2,6 +2,9 @@ from torchvision.datasets import ImageFolder
 import os
 
 
+# TODO: create webdataset
+
+
 class GBIFDataset(ImageFolder):
     def __init__(self, root, split, download=True, **kwargs):
         self.root = root

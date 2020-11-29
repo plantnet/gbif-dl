@@ -16,21 +16,30 @@ from typing import Dict, Optional, Union, List
 
 log = logging.getLogger(__name__)
 
-# TODO: add resume
-# TODO: support universal file queue
 # TODO: speed up queries
-# TODO: report statistics (downloads, )
 # TODO: add unit tests
-# TODO: create webdataset
 
 @pescador.streamable
 def gbif_query_generator(
     page_limit: int = 300,
     mediatype: str = 'StillImage',
     label: str = 'speciesKey',
+
     *args, **kwargs
 ) -> str:
+    """Performs media queries GBIF yielding url and label
 
+    Args:
+        page_limit (int, optional): GBIF api uses paging which can be modified. Defaults to 300.
+        mediatype (str, optional): Sets GBIF mediatype. Defaults to 'StillImage'.
+        label (str, optional): Sets label. Defaults to 'speciesKey'.
+
+    Returns:
+        str: [description]
+
+    Yields:
+        Iterator[str]: [description]
+    """
     offset = 0
 
     while True:
@@ -46,7 +55,6 @@ def gbif_query_generator(
             offset = resp['offset'] + page_limit
 
         # TODO: try random offset to shuffle responses
-
         # Iterate over request pages. Can possibly also done async
         for metadata in resp['results']:
             # check if media key is present
@@ -69,9 +77,6 @@ def gbif_query_generator(
                     media['identifier'].encode('utf-8')
                 ).hexdigest()
 
-                # TODO: add test for failed download
-                # if random.randint(0, 1):
-                #     media['identifier'] = "http:////"
                 yield {
                     "url": media['identifier'],
                     "basename": hashed_url,
@@ -85,6 +90,14 @@ def gbif_count(
     mediatype: str = 'StillImage',
     *args, **kwargs
 ) -> str:
+    """Count the number of occurances from given query
+
+    Args:
+        mediatype (str, optional): [description]. Defaults to 'StillImage'.
+
+    Returns:
+        str: [description]
+    """
 
     return pygbif.occurrences.search(
         limit=0,
@@ -94,6 +107,8 @@ def gbif_count(
 
 
 def dproduct(dicts):
+    """Returns the products of dicts
+    """
     return (dict(zip(dicts, x)) for x in it.product(*dicts.values()))
 
 
@@ -101,9 +116,19 @@ def get_urls(
     queries: Dict,
     label: str = "speciesKey",
     balance_by: Optional[Union[str, List]] = None,
-    root: str = "data",
     cache_requests: bool = False
 ):
+    """Provides url generator from given query
+
+    Args:
+        queries (Dict): dictionary of queries supported by the GBIF api
+        label (str, optional): label identfier, according to query api. Defaults to "speciesKey".
+        balance_by (Optional[Union[str, List]], optional): identifiers to be balanced by. Defaults to None.
+        cache_requests (bool, optional): Enable GBIF API cache. Defaults to False.
+
+    Returns:
+        [type]: [description]
+    """
     streams = []
     pygbif.caching(cache_requests)
 
@@ -145,8 +170,7 @@ def get_urls(
         mode="exhaustive"  # if one stream is empty fails we are done
     )
 
-    gen = mux(max_iter=min_count * len(streams))
-    return gen
+    return mux(max_iter=min_count * len(streams))
 
 
 if __name__ == "__main__":
@@ -162,7 +186,7 @@ if __name__ == "__main__":
         ]
     }
 
-    get_data(
+    get_urls(
         queries=queries,
         label="speciesKey",
         balance_by=["scientificName"],

@@ -1,5 +1,5 @@
 import pytest
-import gbifdataset as gbifds
+import gbifds
 import asyncio
 
 

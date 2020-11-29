@@ -12,6 +12,10 @@ from aiohttp_retry import RetryClient, RetryOptions
 from tqdm.asyncio import tqdm
 
 
+# TODO: add resume
+# TODO: support universal file queue
+# TODO: report statistics (downloads, )
+
 def async_wrap_iter(it):
     """Wrap blocking iterator into an asynchronous one"""
     loop = get_or_create_eventloop()
