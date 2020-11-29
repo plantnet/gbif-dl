@@ -1,16 +1,16 @@
 from setuptools import setup, find_packages
 
-gbifdataset_version = "0.1.0"
+gbifds_version = "0.1.0"
 
 with open("README.md", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="gbifdataset",
-    version=gbifdataset_version,
+    name="gbifds",
+    version=gbifds_version,
     author="Fabian-Robert Stöter (Inria)",
     author_email="fabian-robert.stoter@inria.fr",
-    url="https://github.com/plantnet/gbifdataset",
+    url="https://github.com/plantnet/gbifds",
     description="Machine learning data loaders for GBIF",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -24,6 +24,7 @@ setup(
         "pygbif==0.5.0",
         "pescador>=2.1.0",
         "aiostream>=0.5.1",
+        "python-dwca-reader"
         "tqdm"
     ],
     extras_require={
@@ -31,7 +32,7 @@ setup(
         "torch":  ["torch>=1.7.0", "torchvision"],
         "tensorflow": ["tensorflow>=2.4.0"]
     },
-    # entry_points={"console_scripts": ["gbifdataset=gbifdataset.cli:download"]},
+    # entry_points={"console_scripts": ["gbifds=gbifds.cli:download"]},
     packages=find_packages(),
     include_package_data=True,
     classifiers=[
