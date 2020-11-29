@@ -2,7 +2,7 @@ import asyncio
 import inspect
 import threading
 from pathlib import Path
-from typing import AsyncGenerator, Generator, List, Optional, Union
+from typing import AsyncGenerator, Dict, Generator, Union
 from collections.abc import Iterable
 
 import aiofiles
@@ -14,7 +14,7 @@ from tqdm.asyncio import tqdm
 
 def async_wrap_iter(it):
     """Wrap blocking iterator into an asynchronous one"""
-    loop = asyncio.get_event_loop()
+    loop = get_or_create_eventloop()
     q = asyncio.Queue(1)
     exception = None
     _END = object()
@@ -45,8 +45,15 @@ def async_wrap_iter(it):
     return yield_queue_items()
 
 
-async def download_single_url(sample, session, root="downloads"):
-    url = sample['url']
+async def download_single(item: Dict, session: RetryClient, root: str = "downloads"):
+    """Async function to download single url to disk
+
+    Args:
+        item (Dict): item details, including url and filename
+        session (RetryClient): aiohttp session
+        root (str, optional): Root path of download. Defaults to "downloads".
+    """
+    url = item['url']
 
     async with session.get(url) as res:
         content = await res.read()
@@ -57,35 +64,42 @@ async def download_single_url(sample, session, root="downloads"):
         return
 
     # check for path
-    label_path = Path(root, sample['label'])
+    label_path = Path(root, item['label'])
     label_path.mkdir(parents=True, exist_ok=True)
-    file_path = (label_path / sample['hash']).with_suffix('.jpg')
+    file_path = (label_path / item['basename']).with_suffix(item['suffix'])
 
     async with aiofiles.open(file_path, "+wb") as f:
         await f.write(content)
 
 
-async def download_queue(queue, session, root="downloads"):
+async def download_queue(queue: asyncio.Queue, session: RetryClient, root: str):
+    """Consumes items from download queue
+
+    Args:
+        queue (asyncio.Queue): Queue of items
+        session (RetryClient): RetryClient aiohttp session object
+        root (str, optional): root path.
+    """
     while True:
         batch = await queue.get()
         for sample in batch:
-            await download_single_url(sample, session, root)
+            await download_single(sample, session, root)
         queue.task_done()
 
 
-async def download(
-    rows: Union[Generator, AsyncGenerator],
+async def download_from_asyncgen(
+    items: AsyncGenerator,
     root: str = "data",
-    tcp_connections: int = 128,
-    nb_workers: int = 128,
-    batch_size: int = 8,
+    tcp_connections: int = 256,
+    nb_workers: int = 256,
+    batch_size: int = 16,
     retries: int = 3,
     verbose: bool = False
 ):
     """Asynchronous downloader that takes an interable and downloads it
 
     Args:
-        rows (Union[Generator, AsyncGenerator]):
+        items (Union[Generator, AsyncGenerator]):
             (async/sync) generator that yiels a standardized dict of urls
         root (str, optional):
             Root path of downloads. Defaults to "data".
@@ -103,17 +117,6 @@ async def download(
     Raises:
         NotImplementedError: If generator turns out to be invalid.
     """
-    # check if the generator is async
-    if not inspect.isasyncgen(rows):
-        # if its not, apply hack to make it async
-        if inspect.isgenerator(rows):
-            rows = async_wrap_iter(rows)
-        elif isinstance(rows, Iterable):
-            rows = aiostream.stream.iterate(rows)
-        else:
-            raise NotImplementedError(
-                "Provided generator was not async and couldn't be converted"
-            )
 
     queue = asyncio.Queue(nb_workers)
 
@@ -134,7 +137,7 @@ async def download(
 
         progressbar = tqdm(smoothing=0, unit=' Images', disable=verbose)
         # get chunks from async generator
-        async with aiostream.stream.chunks(rows, batch_size).stream() as chnk:
+        async with aiostream.stream.chunks(items, batch_size).stream() as chnk:
             async for batch in chnk:
                 await queue.put(batch)
                 progressbar.update(len(batch))
@@ -143,3 +146,93 @@ async def download(
 
     for w in workers:
         w.cancel()
+
+
+def get_or_create_eventloop():
+    try:
+        return asyncio.get_event_loop()
+    except RuntimeError as ex:
+        if "There is no current event loop in thread" in str(ex):
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            return asyncio.get_event_loop()
+
+class RunThread(threading.Thread):
+    def __init__(self, func, args, kwargs):
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+        super().__init__()
+
+    def run(self):
+        self.result = asyncio.run(self.func(*self.args, **self.kwargs))
+
+def run_async(func, *args, **kwargs):
+    """async wrapper to detect if asyncio loop is already running
+
+    This is useful when already running in async thread.
+    """
+    try:
+        loop = get_or_create_eventloop()
+    except RuntimeError:
+        loop = None
+    if loop and loop.is_running():
+        thread = RunThread(func, args, kwargs)
+        thread.start()
+        thread.join()
+        return thread.result
+    else:
+        return asyncio.run(func(*args, **kwargs))
+
+def download(
+    items: Union[Generator, AsyncGenerator, Iterable],
+    root: str = "data",
+    tcp_connections: int = 256,
+    nb_workers: int = 256,
+    batch_size: int = 16,
+    retries: int = 3,
+    verbose: bool = False
+):
+    """Core download function that takes an interable (sync or async)
+
+    Args:
+        items (Union[Generator, AsyncGenerator, Iterable]):
+            (async/sync) generator or list that yiels a standardized dict of urls
+        root (str, optional):
+            Root path of downloads. Defaults to "data".
+        tcp_connections (int, optional): 
+            Maximum number of concurrent TCP connections. Defaults to 128.
+        nb_workers (int, optional):
+            Maximum number of workers. Defaults to 128.
+        batch_size (int, optional):
+            Maximum queue batch size. Defaults to 8.
+        retries (int, optional):
+            Maximum number of retries. Defaults to 3.
+        bose (bool, if isinstance(e, Iterable):ptional): 
+            Activate verbose. Defaults to False.
+
+    Raises:
+        NotImplementedError: If generator turns out to be invalid.
+    """
+
+    # check if the generator is async
+    if not inspect.isasyncgen(items):
+        # if its not, apply hack to make it async
+        if inspect.isgenerator(items):
+            items = async_wrap_iter(items)
+        elif isinstance(items, Iterable):
+            items = aiostream.stream.iterate(items)
+        else:
+            raise NotImplementedError(
+                "Provided iteratable could not be converted"
+            )
+    return run_async(
+        download_from_asyncgen,
+        items,
+        root=root,
+        tcp_connections=tcp_connections,
+        nb_workers=nb_workers,
+        batch_size=batch_size,
+        retries=retries,
+        verbose=verbose
+    )

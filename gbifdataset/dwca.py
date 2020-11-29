@@ -54,10 +54,10 @@ def dwca_generator(
 
             yield {
                 "url": url,
-                "hash": hashed_url,
+                "basename": hashed_url,
                 "label": str(row.data.get(gbifqualname + label)),
                 "content_type": content_type,
-                "extension": mimetypes.guess_extension(str(content_type)),
+                "suffix": mimetypes.guess_extension(str(content_type)),
             }
 
 

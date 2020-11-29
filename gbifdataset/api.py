@@ -74,10 +74,10 @@ def gbif_query_generator(
                 #     media['identifier'] = "http:////"
                 yield {
                     "url": media['identifier'],
-                    "hash": hashed_url,
+                    "basename": hashed_url,
                     "label": str(metadata.get(label)),
                     "content_type": content_type,
-                    "extension": mimetypes.guess_extension(str(content_type)),
+                    "suffix": mimetypes.guess_extension(str(content_type)),
                 }
 
 
@@ -97,7 +97,7 @@ def dproduct(dicts):
     return (dict(zip(dicts, x)) for x in it.product(*dicts.values()))
 
 
-def get_data(
+def get_urls(
     queries: Dict,
     label: str = "speciesKey",
     balance_by: Optional[Union[str, List]] = None,
@@ -146,7 +146,6 @@ def get_data(
     )
 
     gen = mux(max_iter=min_count * len(streams))
-    # asyncio.run(io.download(generator=gen, root=root))
     return gen
 
 
