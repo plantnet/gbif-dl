@@ -4,9 +4,10 @@ import random
 import requests
 import hashlib
 import mimetypes
-import asyncio
 import re
 import tempfile
+import shutil
+
 
 from dwca.read import DwCAReader
 
@@ -85,7 +86,7 @@ def doi_to_gbif_key(doi: str) -> str:
                 return gbif_key
 
 def _is_doi(identifier: str) -> bool:
-    """validates if str is a valid doi
+    """Validates if identifier is a valid DOI
 
     Args:
         identifier (str): potential doi string
@@ -106,15 +107,17 @@ def _is_doi(identifier: str) -> bool:
             return True
     return False
 
-def get_items(identifier: str, dwca_root_path=None):
+def gen_items(identifier: str, dwca_root_path=None):
     """Generate GBIF items from DOI or GBIF download key
 
     Args:
         identifier (str): doi or gbif key
-        dwca_root_path (str, optional): [description]. Defaults to "dwcas".
+        dwca_root_path (str, optional): Set root path where to store 
+            Darwin Core zip files. Defaults to None, which results in
+            the creation of temporary directries
 
     Returns:
-        [type]: [description]
+        Iterable: item generator that yields files from generator
     """
     if _is_doi:
         key = doi_to_gbif_key(identifier)
@@ -122,17 +125,18 @@ def get_items(identifier: str, dwca_root_path=None):
         key = identifier
 
     if dwca_root_path is None:
-        is_temp = True
         dwca_root_path = tempfile.mkdtemp()
 
     # download darwin core archive
     dwca_root_path = Path(dwca_root_path)
     dwca_root_path.mkdir(parents=True, exist_ok=True)
-    r = pygbif.occurrences.download_get(
-        key=key,
-        path=dwca_root_path
-    )
-    dwca_path = r['path']
+    dwca_path = Path(dwca_root_path, key + '.zip')
+    if not dwca_path.exists():
+        r = pygbif.occurrences.download_get(
+            key=key,
+            path=dwca_root_path
+        )
+        dwca_path = r['path']
 
-    # extract urls images
-    gen = dwca_generator(dwca_path=dwca_path)
+    # extract media urls and return item generator
+    return dwca_generator(dwca_path=dwca_path)
