@@ -8,10 +8,7 @@ import asyncio
 import re
 import tempfile
 
-from gbifds import api
-
 from dwca.read import DwCAReader
-from dwca.darwincore.utils import qualname as qn
 
 mmqualname = "http://purl.org/dc/terms/"
 gbifqualname = "http://rs.gbif.org/terms/1.0/"
@@ -22,15 +19,15 @@ def dwca_generator(
     label: str = "speciesKey",
     type: str = 'StillImage'
 ):
-    """[summary]
+    """Yields media urls from GBIF Darwin Core Archive
 
     Args:
-        dwca_path (str): [description]
-        label (str, optional): [description]. Defaults to "speciesKey".
-        type (str, optional): [description]. Defaults to 'StillImage'.
+        dwca_path (str): path to darwin core zip file
+        label (str, optional): Output label name. Defaults to "speciesKey".
+        type (str, optional): Media type. Defaults to 'StillImage'.
 
     Yields:
-        [type]: [description]
+        Dict: Item dictionary
     """
     with DwCAReader(dwca_path) as dwca:
         for row in dwca:
@@ -96,10 +93,20 @@ def _is_doi(identifier: str) -> bool:
     Returns:
         bool: true if identifier is a valid DOI
     """
-    return True
-    # return bool(re.match('/^10.\d{4,9}/[-._;()/:A-Z0-9]+$/i', identifier))
+    doi_patterns = [
+        r"(10[.][0-9]{4,}(?:[.][0-9]+)*/(?:(?![\"&\'])\S)+)",
+        r"(10.\d{4,9}/[-._;()/:A-Z0-9]+)",
+        r"(10.\d{4}/\d+-\d+X?(\d+)\d+<[\d\w]+:[\d\w]*>\d+.\d+.\w+;\d)",
+        r"(10.1021/\w\w\d+)",
+        r"(10.1207/[\w\d]+\&\d+_\d+)"
+    ]
+    for pattern in doi_patterns:
+        match = bool(re.match(pattern, identifier))
+        if match:
+            return True
+    return False
 
-def get_data(identifier: str, dwca_root_path=None):
+def get_items(identifier: str, dwca_root_path=None):
     """Generate GBIF items from DOI or GBIF download key
 
     Args:
@@ -129,7 +136,3 @@ def get_data(identifier: str, dwca_root_path=None):
 
     # extract urls images
     gen = dwca_generator(dwca_path=dwca_path)
-
-
-# TODO: use usr_data for tmp
-# TODO: enable delete = True

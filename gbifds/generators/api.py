@@ -6,18 +6,11 @@ import pescador
 import mimetypes
 import requests
 import hashlib
-from . import io
 import logging
-import asyncio
-import aiostream
 
 from typing import Dict, Optional, Union, List
 
-
 log = logging.getLogger(__name__)
-
-# TODO: speed up queries
-# TODO: add unit tests
 
 @pescador.streamable
 def gbif_query_generator(
@@ -54,7 +47,6 @@ def gbif_query_generator(
         else:
             offset = resp['offset'] + page_limit
 
-        # TODO: try random offset to shuffle responses
         # Iterate over request pages. Can possibly also done async
         for metadata in resp['results']:
             # check if media key is present
@@ -112,7 +104,7 @@ def dproduct(dicts):
     return (dict(zip(dicts, x)) for x in it.product(*dicts.values()))
 
 
-def get_urls(
+def get_items(
     queries: Dict,
     label: str = "speciesKey",
     balance_by: Optional[Union[str, List]] = None,
@@ -171,27 +163,5 @@ def get_urls(
     )
 
     return mux(max_iter=min_count * len(streams))
-
-
-if __name__ == "__main__":
-    queries = {
-        "scientificName": [
-            "Robinia pseudoacacia L",
-            "Ailanthus altissima (Mill.) Swingle",
-            "Acer negundo L",
-        ],
-        "datasetKey": [
-            "7a3679ef-5582-4aaa-81f0-8c2545cafc81",  # plantnet
-            # "50c9509d-22c7-4a22-a47d-8c48425ef4a7"  # inaturalist
-        ]
-    }
-
-    get_urls(
-        queries=queries,
-        label="speciesKey",
-        balance_by=["scientificName"],
-        root="dataset"
-    )
-
 
 

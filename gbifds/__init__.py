@@ -1,3 +1,3 @@
 from . import io
-from . import dwca
-from . import api
+from .generators import dwca
+from .generators import api
