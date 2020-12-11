@@ -24,7 +24,8 @@ setup(
         "pygbif>=0.5.0",
         "pescador>=2.1.0",
         "python-dwca-reader",
-        "tqdm"
+        "tqdm",
+        "typing-extensions; python_version < '3.8'"
     ],
     extras_require={
         "tests": ["pytest"],

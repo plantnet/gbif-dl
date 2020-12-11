@@ -150,10 +150,17 @@ url_generator = gbif_dl.dwca.generate_urls(
 ```
 ### Downloading images to disk
 
+Downloading from a url generator can simply be done by running.
+
 ```python
 gbif_dl.io.download(list_of_urls, root="my_dataset")
 ```
+
+The downloader provides very fast download speeds by using an async queue. Some fail-safe functionality is provided by setting the number of `retries`, default to 3.
+
 ### Tensorflow or Pytorch Dataset loaders
+
+t.b.a.
 
 ## FAQ
 

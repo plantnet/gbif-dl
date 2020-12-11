@@ -19,7 +19,7 @@ gbifqualname = "http://rs.gbif.org/terms/1.0/"
 def dwca_generator(
     dwca_path: str,
     label: str = "speciesKey",
-    type: str = 'StillImage'
+    mediatype: str = 'StillImage'
 ) -> MediaData:
     """Yields media urls from GBIF Darwin Core Archive
 
@@ -39,7 +39,7 @@ def dwca_generator(
                 # therefore lets filter the images first and then 
                 # yield a random one
                 if ext.rowtype == gbifqualname + 'Multimedia':
-                    if ext.data[mmqualname + 'type'] == type:
+                    if ext.data[mmqualname + 'type'] == mediatype:
                         img_extensions.append(ext.data)
 
             selected_img = random.choice(
