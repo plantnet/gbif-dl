@@ -7,17 +7,16 @@ import mimetypes
 import requests
 import hashlib
 import logging
+import numpy as np
 
 from typing import Dict, Optional, Union, List
 
 log = logging.getLogger(__name__)
 
-@pescador.streamable
 def gbif_query_generator(
     page_limit: int = 300,
     mediatype: str = 'StillImage',
     label: str = 'speciesKey',
-
     *args, **kwargs
 ) -> str:
     """Performs media queries GBIF yielding url and label
@@ -104,64 +103,112 @@ def dproduct(dicts):
     return (dict(zip(dicts, x)) for x in it.product(*dicts.values()))
 
 
-def get_items(
+def generate_urls(
     queries: Dict,
     label: str = "speciesKey",
-    balance_by: Optional[Union[str, List]] = None,
-    cache_requests: bool = False
+    balance_streams_by: Optional[Union[str, List]] = None,
+    nb_samples_per_stream: Optional[int] = None,
+    nb_samples: Optional[int] = None,
+    weighted_streams: bool = False,
+    cache_requests: bool = False,
 ):
     """Provides url generator from given query
 
     Args:
         queries (Dict): dictionary of queries supported by the GBIF api
-        label (str, optional): label identfier, according to query api. Defaults to "speciesKey".
-        balance_by (Optional[Union[str, List]], optional): identifiers to be balanced by. Defaults to None.
-        cache_requests (bool, optional): Enable GBIF API cache. Defaults to False.
+        label (str, optional): label identfier, according to query api. 
+            Defaults to "speciesKey".
+        nb_samples (int):
+            Limit the total number of samples retrieved from the API.
+            When set to -1 and `balance_streams_by` is not `None`,
+            a minimum number of samples will be calculated
+            from using the number of available samples per stream.
+            Defaults to `None` which retrieves all samples from all streams until
+            all streams are exchausted.
+        nb_samples_per_stream (int):
+            Limit the maximum number of items to be retrieved per stream.
+            Defaults to `None` which retrieves all samples from stream until 
+            stream generator is exhausted.
+        balance_streams_by (Optional[Union[str, List]], optional): 
+            identifiers to be balanced by. Defaults to None.
+        weighted_streams (int):
+            Calculates sampling weights for all streams and applies them during
+            sampling. To be combined with nb_samples not `None`.
+            Defaults to `False`.
+        cache_requests (bool, optional): Enable GBIF API cache.
+            Can significantly improve API requests. Defaults to False.
 
     Returns:
-        [type]: [description]
+        Iterable: generate-like object, that yields dictionaries
     """
     streams = []
+    # set pygbif api caching
     pygbif.caching(cache_requests)
 
-    # use multiple queries for balancing
-    if balance_by is not None:
+    # copy queries since we delete keys from the dict
+    q = queries.copy()
+
+    # if weighted_streams and nb_samples_per_stream is not None:
+    #     raise RuntimeError("weights can only be applied when the number of samples are limited.")
+
+    # Split queries into product of streamers
+    if balance_streams_by is not None:
         balance_queries = {}
-        if isinstance(balance_by, str):
-            balance_by = [balance_by]
+        # if single string is provided, covert into list
+        if isinstance(balance_streams_by, str):
+            balance_streams_by = [balance_streams_by]
 
         # remove balance_by from query and move to balance_queries
-        for key in balance_by:
-            balance_queries[key] = queries.pop(key)
+        for key in balance_streams_by:
+            balance_queries[key] = q.pop(key)
 
         # for each b in balance_queries, create a separate stream
-        # this control the sampling processs of that stream
-        # thus balancing it
+        # later we control the sampling processs of these streams to balance
         for b in dproduct(balance_queries):
+            # for each stream we wrap into pescador Streamers for additional features
             streams.append(
-                gbif_query_generator(
-                    label=label, **queries, **b)
+                pescador.Streamer(
+                    pescador.Streamer(
+                        gbif_query_generator,
+                        label=label,
+                        **q,
+                        **b
+                    ),
+                    # this makes sure that we only obtain a maximum number
+                    # of samples per stream
+                    max_iter=nb_samples_per_stream
+                )
             )
-        # count the available occurances for each stream and select the minimum
-        # we will only yield the minimum of streams to balance
-        min_count = min(
-            [
-                gbif_count(**queries, **b) for b in dproduct(balance_queries)
-            ]
+        # count the available occurances for each stream and select the minimum.
+        # We only yield the minimum of streams to balance
+        if nb_samples == -1:
+            # calculate the miniumum number of samples available per stream
+            nb_samples = min(
+                [
+                    gbif_count(**q, **b) for b in dproduct(balance_queries)
+                ]
+            ) * len(streams)
+
+        if weighted_streams:
+            weights = np.array([float(gbif_count(**q, **b)) for b in dproduct(balance_queries)])
+            weights /= np.max(weights)
+        else:
+            weights = None
+
+        mux = pescador.StochasticMux(
+            streams,
+            n_active=len(streams),  # all streams are always active.
+            rate=None,  # all streams are balanced
+            weights=None,  # weight streams
+            mode="exhaustive"  # if one stream fails it is not revived
         )
 
-    # else there will be only one stream, no balancing
+        return mux(max_iter=nb_samples)
+
+    # else there will be only one stream, hence no balancing or sampling
     else:
-        streams = [gbif_query_generator(label=label, **queries)]
-        min_count = gbif_count(**queries)
+        nb_samples = min(nb_samples_per_stream, nb_samples)
+        return pescador.Streamer(gbif_query_generator, label=label, **q, )
 
-    mux = pescador.StochasticMux(
-        streams,
-        n_active=len(streams),  # all streams are always active.
-        rate=None,  # all streams are balanced
-        mode="exhaustive"  # if one stream is empty fails we are done
-    )
-
-    return mux(max_iter=min_count * len(streams))
 
 

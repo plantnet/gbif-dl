@@ -107,7 +107,7 @@ def _is_doi(identifier: str) -> bool:
             return True
     return False
 
-def gen_items(identifier: str, dwca_root_path=None):
+def generate_urls(identifier: str, dwca_root_path=None):
     """Generate GBIF items from DOI or GBIF download key
 
     Args:
