@@ -2,7 +2,7 @@ import asyncio
 import inspect
 import threading
 from pathlib import Path
-from typing import AsyncGenerator, Dict, Generator, Union
+from typing import AsyncGenerator, Dict, Generator, Union, TypedDict
 from collections.abc import Iterable
 
 import aiofiles
@@ -10,6 +10,16 @@ import aiohttp
 import aiostream
 from aiohttp_retry import RetryClient, RetryOptions
 from tqdm.asyncio import tqdm
+
+
+class MediaData(TypedDict):
+    """ Media dict representation received from api or dwca generators"""
+    url: str
+    basename: str
+    label: str
+    content_type: str
+    suffice: str
+
 
 def async_wrap_iter(it):
     """Wrap blocking iterator into an asynchronous one"""
@@ -44,7 +54,7 @@ def async_wrap_iter(it):
     return yield_queue_items()
 
 
-async def download_single(item: Dict, session: RetryClient, root: str = "downloads"):
+async def download_single(item: MediaData, session: RetryClient, root: str = "downloads"):
     """Async function to download single url to disk
 
     Args:

@@ -1,5 +1,5 @@
 import pytest
-import gbifds
+import gbif_dl
 import asyncio
 
 
@@ -43,16 +43,16 @@ def gen_from_list(rows):
 
 
 def test_download_list(urls):
-    gbifds.io.download(urls, root="root")
+    gbif_dl.io.download(urls, root="root")
 
 
 @pytest.mark.xfail
 def test_download_fromgen(urls):
     """Currently failes because some async stuff"""
-    gbifds.io.download(gen_from_list(urls), root="root")
+    gbif_dl.io.download(gen_from_list(urls), root="root")
 
 
 def test_download_fromasybc(urls):
-    gbifds.io.download(async_gen_from_list(urls), root="root")
+    gbif_dl.io.download(async_gen_from_list(urls), root="root")
 
 

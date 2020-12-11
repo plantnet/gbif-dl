@@ -9,6 +9,8 @@ import hashlib
 import logging
 import numpy as np
 
+from ..io import MediaData
+
 from typing import Dict, Optional, Union, List
 
 log = logging.getLogger(__name__)
@@ -18,7 +20,7 @@ def gbif_query_generator(
     mediatype: str = 'StillImage',
     label: str = 'speciesKey',
     *args, **kwargs
-) -> str:
+) -> MediaData:
     """Performs media queries GBIF yielding url and label
 
     Args:
@@ -106,21 +108,23 @@ def dproduct(dicts):
 def generate_urls(
     queries: Dict,
     label: str = "speciesKey",
-    balance_streams_by: Optional[Union[str, List]] = None,
+    split_streams_by: Optional[Union[str, List]] = None,
     nb_samples_per_stream: Optional[int] = None,
     nb_samples: Optional[int] = None,
     weighted_streams: bool = False,
     cache_requests: bool = False,
+    mediatype: str = "StillImage"
 ):
     """Provides url generator from given query
 
     Args:
-        queries (Dict): dictionary of queries supported by the GBIF api
+        queries (Dict): 
+            dictionary of queries supported by the GBIF api
         label (str, optional): label identfier, according to query api. 
             Defaults to "speciesKey".
         nb_samples (int):
             Limit the total number of samples retrieved from the API.
-            When set to -1 and `balance_streams_by` is not `None`,
+            When set to -1 and `split_streams_by` is not `None`,
             a minimum number of samples will be calculated
             from using the number of available samples per stream.
             Defaults to `None` which retrieves all samples from all streams until
@@ -129,14 +133,17 @@ def generate_urls(
             Limit the maximum number of items to be retrieved per stream.
             Defaults to `None` which retrieves all samples from stream until 
             stream generator is exhausted.
-        balance_streams_by (Optional[Union[str, List]], optional): 
-            identifiers to be balanced by. Defaults to None.
+        split_streams_by (Optional[Union[str, List]], optional): 
+            Identifiers to be balanced. Defaults to None.
         weighted_streams (int):
             Calculates sampling weights for all streams and applies them during
             sampling. To be combined with nb_samples not `None`.
             Defaults to `False`.
         cache_requests (bool, optional): Enable GBIF API cache.
             Can significantly improve API requests. Defaults to False.
+        mediatype (str):
+            supported GBIF media type. Can be `StillImage`, `MovingImage`, `Sound`.
+            Defaults to `StillImage`.
 
     Returns:
         Iterable: generate-like object, that yields dictionaries
@@ -152,14 +159,14 @@ def generate_urls(
     #     raise RuntimeError("weights can only be applied when the number of samples are limited.")
 
     # Split queries into product of streamers
-    if balance_streams_by is not None:
+    if split_streams_by is not None:
         balance_queries = {}
         # if single string is provided, covert into list
-        if isinstance(balance_streams_by, str):
-            balance_streams_by = [balance_streams_by]
+        if isinstance(split_streams_by, str):
+            split_streams_by = [split_streams_by]
 
         # remove balance_by from query and move to balance_queries
-        for key in balance_streams_by:
+        for key in split_streams_by:
             balance_queries[key] = q.pop(key)
 
         # for each b in balance_queries, create a separate stream
@@ -171,6 +178,7 @@ def generate_urls(
                     pescador.Streamer(
                         gbif_query_generator,
                         label=label,
+                        mediatype=mediatype,
                         **q,
                         **b
                     ),
@@ -185,12 +193,12 @@ def generate_urls(
             # calculate the miniumum number of samples available per stream
             nb_samples = min(
                 [
-                    gbif_count(**q, **b) for b in dproduct(balance_queries)
+                    gbif_count(mediatype=mediatype, **q, **b) for b in dproduct(balance_queries)
                 ]
             ) * len(streams)
 
         if weighted_streams:
-            weights = np.array([float(gbif_count(**q, **b)) for b in dproduct(balance_queries)])
+            weights = np.array([float(gbif_count(mediatype=mediatype, **q, **b)) for b in dproduct(balance_queries)])
             weights /= np.max(weights)
         else:
             weights = None

@@ -8,6 +8,7 @@ import re
 import tempfile
 import shutil
 
+from ..io import MediaData
 
 from dwca.read import DwCAReader
 
@@ -19,7 +20,7 @@ def dwca_generator(
     dwca_path: str,
     label: str = "speciesKey",
     type: str = 'StillImage'
-):
+) -> MediaData:
     """Yields media urls from GBIF Darwin Core Archive
 
     Args:
@@ -107,7 +108,12 @@ def _is_doi(identifier: str) -> bool:
             return True
     return False
 
-def generate_urls(identifier: str, dwca_root_path=None):
+def generate_urls(
+    identifier: str,
+    dwca_root_path=None,
+    label: str = "speciesKey",
+    mediatype: str = "StillImage"
+):
     """Generate GBIF items from DOI or GBIF download key
 
     Args:
@@ -139,4 +145,8 @@ def generate_urls(identifier: str, dwca_root_path=None):
         dwca_path = r['path']
 
     # extract media urls and return item generator
-    return dwca_generator(dwca_path=dwca_path)
+    return dwca_generator(
+        dwca_path=dwca_path,
+        label=label,
+        mediatype=mediatype
+    )
