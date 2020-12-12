@@ -153,14 +153,23 @@ url_generator = gbif_dl.dwca.generate_urls(
 Downloading from a url generator can simply be done by running.
 
 ```python
-gbif_dl.io.download(list_of_urls, root="my_dataset")
+gbif_dl.io.download(url_generator, root="my_dataset")
 ```
 
 The downloader provides very fast download speeds by using an async queue. Some fail-safe functionality is provided by setting the number of `retries`, default to 3.
 
-### Tensorflow or Pytorch Dataset loaders
+### Training Datasets/Dataloaders
 
-t.b.a.
+#### PyTorch
+
+`gbif-dl` makes it simple to train a PyTorch image classification model by providing a standard `torch.dataset`. Users can directly pass a query or dwca generator to the dataset and enable downloading, to simplify the code. 
+
+```python
+from gbif_dl.dataloaders.torch import GBIFImageDataset
+dataset = GBIFImageDataset(root='my_dataset', generator=url_generator, download=True)
+```
+
+> ⚠️ Note that we do not provide train/validation/test splits of the dataset as this would be more useful to design specifically to the downstream task.
 
 ## FAQ
 

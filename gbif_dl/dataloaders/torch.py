@@ -1,21 +1,36 @@
-from torchvision.datasets import ImageFolder
+import torchvision
+from typing import AsyncGenerator, Optional, Union, Generator, Any, Iterable
+
+from .. import io
 import os
 
 
-# TODO: create webdataset
+class GBIFImageDataset(torchvision.datasets.ImageFolder):
+    """GBIF Image Dataset
 
+    Args:
+        root (str): 
+            Root path of dataset
+        generator (Optional[Union[Generator, AsyncGenerator, Iterable]]):
+            Url list generator.
+        download (Optional[bool], optional): 
+            Enable download (if root path does not exist)
+    """
+    def __init__(
+        self,
+        root: str,
+        generator: Optional[Union[Generator, AsyncGenerator, Iterable]],
+        download: bool = True, 
+        **kwargs: Any
+    ) -> None:
 
-class GBIFDataset(ImageFolder):
-    def __init__(self, root, split, download=True, **kwargs):
-        self.root = root
-        self.split = split
-        super().__init__(self.split_folder, **kwargs)
+        self.root = os.path.expanduser(root)
 
-    @property
-    def split_folder(self):
-        # TODO implement split
-        return os.path.join(self.root)
+        if download and not os.path.exists(self.root):
+            self.download(generator)
+            # TODO check integrity
 
+        super(GBIFImageDataset, self).__init__(root=self.root, **kwargs)
 
-def create_dataset(root):
-    return GBIFDataset(root=root, split=None)
+    def download(self, generator) -> None:
+        io.download(items=generator, root=self.root)
