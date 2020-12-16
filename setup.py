@@ -19,7 +19,7 @@ setup(
     install_requires=[
         "aiofiles>=0.6.0",
         "aiohttp>=3.7.2",
-        "aiohttp-retry>=2.0"
+        "aiohttp-retry>=2.0",
         "aiostream>=0.4.1",
         "pygbif>=0.5.0",
         "pescador>=2.1.0",
