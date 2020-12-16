@@ -19,16 +19,8 @@ def urls(request):
             'label': '3189866',
             'content_type': 'image/jpeg',
             'suffix': '.jpg'
-        },
-        {
-            'url': 'https://bs.plantnet.org/image/o/6d3498686f936ebbd0d48922097b2786413791bf',
-            'basename': 'a50e854d85c8dcb0f87dc9d34d3c9f79f59a8f34',
-            'label': '3189866',
-            'content_type': 'image/jpeg',
-            'suffix': '.jpg'
         }
     ]
-
 
 
 async def async_gen_from_list(rows):
@@ -46,7 +38,6 @@ def test_download_list(urls):
     gbif_dl.io.download(urls, root="root")
 
 
-@pytest.mark.xfail
 def test_download_fromgen(urls):
     """Currently failes because some async stuff"""
     gbif_dl.io.download(gen_from_list(urls), root="root")
@@ -54,5 +45,4 @@ def test_download_fromgen(urls):
 
 def test_download_fromasybc(urls):
     gbif_dl.io.download(async_gen_from_list(urls), root="root")
-
 
