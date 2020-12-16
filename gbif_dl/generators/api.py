@@ -187,18 +187,24 @@ def generate_urls(
                     max_iter=nb_samples_per_stream
                 )
             )
-        # count the available occurances for each stream and select the minimum.
+        # count the available occurances for each stream and select the min.
         # We only yield the minimum of streams to balance
         if nb_samples == -1:
             # calculate the miniumum number of samples available per stream
             nb_samples = min(
                 [
-                    gbif_count(mediatype=mediatype, **q, **b) for b in dproduct(balance_queries)
+                    gbif_count(mediatype=mediatype, **q, **b)
+                    for b in dproduct(balance_queries)
                 ]
             ) * len(streams)
 
         if weighted_streams:
-            weights = np.array([float(gbif_count(mediatype=mediatype, **q, **b)) for b in dproduct(balance_queries)])
+            weights = np.array(
+                [
+                    float(gbif_count(mediatype=mediatype, **q, **b))
+                    for b in dproduct(balance_queries)
+                ]
+            )
             weights /= np.max(weights)
         else:
             weights = None
@@ -215,8 +221,12 @@ def generate_urls(
 
     # else there will be only one stream, hence no balancing or sampling
     else:
-        nb_samples = min(nb_samples_per_stream, nb_samples)
-        return pescador.Streamer(gbif_query_generator, label=label, **q, )
+        if nb_samples_per_stream and nb_samples_per_stream:
+            nb_samples = min(nb_samples, nb_samples_per_stream)
 
-
-
+        return pescador.Streamer(
+            gbif_query_generator,
+            label=label,
+            max_iter=nb_samples,
+            **q
+        )
