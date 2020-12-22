@@ -43,10 +43,6 @@ def gbif_query_generator(
             limit=page_limit,
             *args, **kwargs
         )
-        if resp['endOfRecords']:
-            break
-        else:
-            offset = resp['offset'] + page_limit
 
         # Iterate over request pages. Can possibly also done async
         for metadata in resp['results']:
@@ -77,6 +73,11 @@ def gbif_query_generator(
                     "content_type": content_type,
                     "suffix": mimetypes.guess_extension(str(content_type)),
                 }
+
+        if resp['endOfRecords']:
+            break
+        else:
+            offset = resp['offset'] + page_limit
 
 
 def gbif_count(
@@ -113,7 +114,8 @@ def generate_urls(
     nb_samples: Optional[int] = None,
     weighted_streams: bool = False,
     cache_requests: bool = False,
-    mediatype: str = "StillImage"
+    mediatype: str = "StillImage",
+    verbose: bool = False,
 ):
     """Provides url generator from given query
 
@@ -187,6 +189,14 @@ def generate_urls(
                     max_iter=nb_samples_per_stream
                 )
             )
+
+        if verbose:
+            nb_queries = [
+                gbif_count(mediatype=mediatype, **q, **b)
+                for b in dproduct(balance_queries)
+            ]
+            print(sum(nb_queries))
+
         # count the available occurances for each stream and select the min.
         # We only yield the minimum of streams to balance
         if nb_samples == -1:
@@ -213,10 +223,9 @@ def generate_urls(
             streams,
             n_active=len(streams),  # all streams are always active.
             rate=None,  # all streams are balanced
-            weights=None,  # weight streams
+            weights=weights,  # weight streams
             mode="exhaustive"  # if one stream fails it is not revived
         )
-
         return mux(max_iter=nb_samples)
 
     # else there will be only one stream, hence no balancing or sampling
