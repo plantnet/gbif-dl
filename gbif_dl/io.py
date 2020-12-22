@@ -2,7 +2,7 @@ import asyncio
 import inspect
 import threading
 from pathlib import Path
-from typing import AsyncGenerator, Dict, Generator, Union
+from typing import AsyncGenerator, Callable, Generator, Union, Optional
 import sys
 
 if sys.version_info >= (3, 8):
@@ -28,15 +28,35 @@ class MediaData(TypedDict):
     suffix: str
 
 
-async def download_single(item: MediaData, session: RetryClient, root: str = "downloads"):
+async def download_single(
+    item: MediaData,
+    session: RetryClient,
+    root: str = "downloads",
+    is_valid_file: Optional[Callable[[bytes], bool]] = None,
+    overwrite: bool = False
+):
     """Async function to download single url to disk
 
     Args:
         item (Dict): item details, including url and filename
         session (RetryClient): aiohttp session
         root (str, optional): Root path of download. Defaults to "downloads".
+        is_valid_file (optional): A function that takes bytes
+            and checks if the bytes originate from a valid file
+            (used to check of corrupt files). Defaults to None.
+        overwrite (bool):
+            overwrite existing files, Defaults to False.   
     """
     url = item['url']
+
+    # check for path
+    label_path = Path(root, item['label'])
+    label_path.mkdir(parents=True, exist_ok=True)
+    file_path = (label_path / item['basename']).with_suffix(item['suffix'])
+
+    if file_path.exists() and not overwrite:
+        # skip file instead of overwrite
+        return
 
     async with session.get(url) as res:
         content = await res.read()
@@ -46,27 +66,34 @@ async def download_single(item: MediaData, session: RetryClient, root: str = "do
         print(f"Download failed: {res.status}")
         return
 
-    # check for path
-    label_path = Path(root, item['label'])
-    label_path.mkdir(parents=True, exist_ok=True)
-    file_path = (label_path / item['basename']).with_suffix(item['suffix'])
+    if is_valid_file is not None:
+        if not is_valid_file(content):
+            print(f"File check failed")
+            return
 
     async with aiofiles.open(file_path, "+wb") as f:
         await f.write(content)
 
 
-async def download_queue(queue: asyncio.Queue, session: RetryClient, root: str):
+async def download_queue(
+    queue: asyncio.Queue,
+    session: RetryClient,
+    root: str,
+    overwrite: bool = False 
+):
     """Consumes items from download queue
 
     Args:
         queue (asyncio.Queue): Queue of items
         session (RetryClient): RetryClient aiohttp session object
         root (str, optional): root path.
+        overwrite (bool):
+            overwrite existing files, Defaults to False.
     """
     while True:
         batch = await queue.get()
         for sample in batch:
-            await download_single(sample, session, root)
+            await download_single(sample, session, root, overwrite)
         queue.task_done()
 
 
@@ -77,7 +104,8 @@ async def download_from_asyncgen(
     nb_workers: int = 256,
     batch_size: int = 16,
     retries: int = 3,
-    verbose: bool = False
+    verbose: bool = False,
+    overwrite: bool = False
 ):
     """Asynchronous downloader that takes an interable and downloads it
 
@@ -94,9 +122,10 @@ async def download_from_asyncgen(
             Maximum queue batch size. Defaults to 8.
         retries (int, optional):
             Maximum number of retries. Defaults to 3.
-        bose (bool, if isinstance(e, Iterable):ptional): 
+        verbose (bool, if isinstance(e, Iterable):ptional): 
             Activate verbose. Defaults to False.
-
+        overwrite (bool):
+            overwrite existing files, Defaults to False.
     Raises:
         NotImplementedError: If generator turns out to be invalid.
     """
@@ -107,18 +136,18 @@ async def download_from_asyncgen(
 
     async with RetryClient(
         connector=aiohttp.TCPConnector(limit=tcp_connections),
-        raise_for_status=False, 
+        raise_for_status=False,
         retry_options=retry_options
     ) as session:
 
         workers = [
             asyncio.create_task(
-                download_queue(queue, session, root=root)
+                download_queue(queue, session, root=root, overwrite=overwrite)
             )
             for _ in range(nb_workers)
         ]
 
-        progressbar = tqdm(smoothing=0, unit=' Images', disable=verbose)
+        progressbar = tqdm(smoothing=0, unit=' Files', disable=verbose)
         # get chunks from async generator
         async with aiostream.stream.chunks(items, batch_size).stream() as chnk:
             async for batch in chnk:
@@ -176,7 +205,8 @@ def download(
     nb_workers: int = 256,
     batch_size: int = 16,
     retries: int = 3,
-    verbose: bool = False
+    verbose: bool = False,
+    overwrite: bool = False,
 ):
     """Core download function that takes an interable (sync or async)
 
@@ -193,8 +223,10 @@ def download(
             Maximum queue batch size. Defaults to 8.
         retries (int, optional):
             Maximum number of retries. Defaults to 3.
-        bose (bool, if isinstance(e, Iterable):ptional): 
+        verbose (bool, optional): 
             Activate verbose. Defaults to False.
+        overwrite (bool):
+            overwrite existing files, Defaults to False.
 
     Raises:
         NotImplementedError: If generator turns out to be invalid.
@@ -217,5 +249,6 @@ def download(
         nb_workers=nb_workers,
         batch_size=batch_size,
         retries=retries,
-        verbose=verbose
+        verbose=verbose,
+        overwrite=overwrite
     )
