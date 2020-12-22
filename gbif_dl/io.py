@@ -93,7 +93,7 @@ async def download_queue(
     while True:
         batch = await queue.get()
         for sample in batch:
-            await download_single(sample, session, root, overwrite)
+            await download_single(sample, session, root, None, overwrite)
         queue.task_done()
 
 
