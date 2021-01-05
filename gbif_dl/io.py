@@ -15,7 +15,7 @@ from collections.abc import Iterable
 import aiofiles
 import aiohttp
 import aiostream
-from aiohttp_retry import RetryClient, RetryOptions
+from aiohttp_retry import RetryClient, ExponentialRetry
 from tqdm.asyncio import tqdm
 
 
@@ -132,7 +132,7 @@ async def download_from_asyncgen(
 
     queue = asyncio.Queue(nb_workers)
 
-    retry_options = RetryOptions(attempts=retries)
+    retry_options = ExponentialRetry(attempts=retries)
 
     async with RetryClient(
         connector=aiohttp.TCPConnector(limit=tcp_connections),
