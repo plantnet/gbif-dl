@@ -12,6 +12,7 @@ else:
 
 from collections.abc import Iterable
 
+import filetype
 import aiofiles
 import aiohttp
 import aiostream
@@ -45,21 +46,31 @@ async def download_single(
             and checks if the bytes originate from a valid file
             (used to check of corrupt files). Defaults to None.
         overwrite (bool):
-            overwrite existing files, Defaults to False.   
+            overwrite files with existing `baseline` signature, Defaults to False.
     """
     url = item['url']
 
     # check for path
     label_path = Path(root, item['label'])
     label_path.mkdir(parents=True, exist_ok=True)
-    file_path = (label_path / item['basename']).with_suffix(item['suffix'])
 
-    if file_path.exists() and not overwrite:
-        # skip file instead of overwrite
+    check_files_with_same_basename = label_path.glob(item['basename'] + "*")
+    if list(check_files_with_same_basename) and not overwrite:
+        # do not overwrite, skips based on base path 
+        print("skip")
         return
 
     async with session.get(url) as res:
         content = await res.read()
+
+    # guess mimetype and suffix from content
+    kind = filetype.guess(content)
+    if kind is None:
+        print('Cannot guess file type!')
+        return
+    else:
+        suffix = "." + kind.extension
+        mime = kind.mime
 
     # Check everything went well
     if res.status != 200:
@@ -71,6 +82,8 @@ async def download_single(
             print(f"File check failed")
             return
 
+    file_base_path = label_path / item['basename']
+    file_path = file_base_path.with_suffix(suffix)
     async with aiofiles.open(file_path, "+wb") as f:
         await f.write(content)
 
@@ -79,6 +92,7 @@ async def download_queue(
     queue: asyncio.Queue,
     session: RetryClient,
     root: str,
+    is_valid_file: Optional[Callable[[bytes], bool]] = None,
     overwrite: bool = False 
 ):
     """Consumes items from download queue
@@ -87,13 +101,22 @@ async def download_queue(
         queue (asyncio.Queue): Queue of items
         session (RetryClient): RetryClient aiohttp session object
         root (str, optional): root path.
+        is_valid_file (optional): A function that takes bytes
+            and checks if the bytes originate from a valid file
+            (used to check of corrupt files). Defaults to None.
         overwrite (bool):
-            overwrite existing files, Defaults to False.
+            overwrite files with existing `baseline` signature, Defaults to False.
     """
     while True:
         batch = await queue.get()
         for sample in batch:
-            await download_single(sample, session, root, None, overwrite)
+            await download_single(
+                sample,
+                session,
+                root,
+                is_valid_file,
+                overwrite
+            )
         queue.task_done()
 
 
@@ -105,7 +128,8 @@ async def download_from_asyncgen(
     batch_size: int = 16,
     retries: int = 3,
     verbose: bool = False,
-    overwrite: bool = False
+    overwrite: bool = False,
+    is_valid_file: Optional[Callable[[bytes], bool]] = None
 ):
     """Asynchronous downloader that takes an interable and downloads it
 
@@ -125,7 +149,10 @@ async def download_from_asyncgen(
         verbose (bool, if isinstance(e, Iterable):ptional): 
             Activate verbose. Defaults to False.
         overwrite (bool):
-            overwrite existing files, Defaults to False.
+            overwrite files with existing `baseline` signature, Defaults to False.
+        is_valid_file (optional): A function that takes bytes
+            and checks if the bytes originate from a valid file
+            (used to check of corrupt files). Defaults to None.
     Raises:
         NotImplementedError: If generator turns out to be invalid.
     """
@@ -142,7 +169,13 @@ async def download_from_asyncgen(
 
         workers = [
             asyncio.create_task(
-                download_queue(queue, session, root=root, overwrite=overwrite)
+                download_queue(
+                    queue,
+                    session,
+                    root=root,
+                    overwrite=overwrite,
+                    is_valid_file=is_valid_file
+                )
             )
             for _ in range(nb_workers)
         ]
@@ -201,12 +234,13 @@ def run_async(func, *args, **kwargs):
 def download(
     items: Union[Generator, AsyncGenerator, Iterable],
     root: str = "data",
-    tcp_connections: int = 256,
-    nb_workers: int = 256,
+    tcp_connections: int = 128,
+    nb_workers: int = 128,
     batch_size: int = 16,
     retries: int = 3,
     verbose: bool = False,
     overwrite: bool = False,
+    is_valid_file: Optional[Callable[[bytes], bool]] = None
 ):
     """Core download function that takes an interable (sync or async)
 
@@ -226,7 +260,10 @@ def download(
         verbose (bool, optional): 
             Activate verbose. Defaults to False.
         overwrite (bool):
-            overwrite existing files, Defaults to False.
+            overwrite files with existing `baseline` signature, Defaults to False.
+        is_valid_file (optional): A function that takes bytes
+            and checks if the bytes originate from a valid file
+            (used to check of corrupt files). Defaults to None.
 
     Raises:
         NotImplementedError: If generator turns out to be invalid.
@@ -250,5 +287,6 @@ def download(
         batch_size=batch_size,
         retries=retries,
         verbose=verbose,
-        overwrite=overwrite
+        overwrite=overwrite,
+        is_valid_file=is_valid_file
     )
