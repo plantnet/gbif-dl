@@ -1,4 +1,8 @@
-import torchvision
+try:
+    import torchvision
+except ImportError:
+    raise ImportError('Please install PyTorch and Torchvision')
+
 from typing import AsyncGenerator, Optional, Union, Generator, Any, Iterable
 
 from .. import io
