@@ -25,8 +25,6 @@ class MediaData(TypedDict):
     url: str
     basename: str
     label: str
-    content_type: str
-    suffix: str
 
 
 async def download_single(

@@ -48,13 +48,6 @@ def dwca_generator(
 
             url = selected_img[mmqualname + 'identifier']
 
-            if selected_img.get(mmqualname + 'format') is None:
-                h = requests.head(url)
-                header = h.headers
-                content_type = header.get('content-type')
-            else:
-                content_type = selected_img[mmqualname + 'format']
-
             # hash the url, which later becomes the datatype
             hashed_url = hashlib.sha1(
                 url.encode('utf-8')
@@ -63,9 +56,7 @@ def dwca_generator(
             yield {
                 "url": url,
                 "basename": hashed_url,
-                "label": str(row.data.get(gbifqualname + label)),
-                "content_type": content_type,
-                "suffix": mimetypes.guess_extension(str(content_type)),
+                "label": str(row.data.get(gbifqualname + label))
             }
 
 
