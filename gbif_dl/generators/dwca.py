@@ -6,7 +6,6 @@ import hashlib
 import mimetypes
 import re
 import tempfile
-import shutil
 from typing import Optional
 
 from ..io import MediaData
@@ -19,15 +18,16 @@ gbifqualname = "http://rs.gbif.org/terms/1.0/"
 
 def dwca_generator(
     dwca_path: str,
-    label: str = "speciesKey",
+    label: Optional[str] = None,
     mediatype: str = 'StillImage'
 ) -> MediaData:
     """Yields media urls from GBIF Darwin Core Archive
 
     Args:
         dwca_path (str): path to darwin core zip file
-        label (str, optional): Output label name. Defaults to "speciesKey".
-        mediatype (str, optional): Media type. Defaults to 'StillImage'.
+    label (str, optional): Output label name. 
+        Defaults to `None` which yields all metadata.
+    mediatype (str, optional): Media type. Defaults to 'StillImage'.
 
     Yields:
         Dict: Item dictionary
@@ -61,10 +61,15 @@ def dwca_generator(
                 url.encode('utf-8')
             ).hexdigest()
 
+            if label is not None:
+                output_label = str(row.data.get(gbifqualname + label))
+            else:
+                output_label = row.data
+
             yield {
                 "url": url,
                 "basename": hashed_url,
-                "label": str(row.data.get(gbifqualname + label)),
+                "label": output_label,
                 "content_type": content_type,
                 "suffix": mimetypes.guess_extension(str(content_type)),
             }
@@ -112,7 +117,7 @@ def _is_doi(identifier: str) -> bool:
 def generate_urls(
     identifier: str,
     dwca_root_path=None,
-    label: Optional[str] = "speciesKey",
+    label: Optional[str] = None,
     mediatype: Optional[str] = "StillImage"
 ):
     """Generate GBIF items from DOI or GBIF download key
@@ -122,7 +127,8 @@ def generate_urls(
         dwca_root_path (str, optional): Set root path where to store 
             Darwin Core zip files. Defaults to None, which results in
             the creation of temporary directries
-        label (str): output label
+        label (str, optional): Output label name. 
+            Defaults to `None` which yields all metadata.
         mediatype (str, optional): Sets GBIF mediatype. Defaults to 'StillImage'.
 
 

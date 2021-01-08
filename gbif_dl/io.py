@@ -4,7 +4,10 @@ import threading
 from pathlib import Path
 from typing import AsyncGenerator, Callable, Generator, Union, Optional
 import sys
+import json
 import functools
+
+from attr import dataclass
 
 
 if sys.version_info >= (3, 8):
@@ -30,7 +33,6 @@ class MediaData(TypedDict):
     suffix: str
 
 
-@watchdog
 async def download_single(
     item: MediaData,
     session: RetryClient,
@@ -52,8 +54,13 @@ async def download_single(
     """
     url = item['url']
 
-    # check for path
-    label_path = Path(root, item['label'])
+    # create subfolder when label is a single str
+    if isinstance(item['label'], str):
+        label_path = Path(root, item['label'])
+    # otherwise make it a flat file hierarchy
+    else:
+        label_path = Path(root)
+
     label_path.mkdir(parents=True, exist_ok=True)
     file_path = (label_path / item['basename']).with_suffix(item['suffix'])
 
@@ -77,6 +84,10 @@ async def download_single(
     async with aiofiles.open(file_path, "+wb") as f:
         await f.write(content)
 
+    if isinstance(item['label'], dict):
+        json_path = (label_path / item['basename']).with_suffix('.json')
+        async with aiofiles.open(json_path, mode='+w') as fp:
+            await fp.write(json.dumps(item['label']))
 
 async def download_queue(
     queue: asyncio.Queue,
@@ -103,8 +114,8 @@ async def download_queue(
 async def download_from_asyncgen(
     items: AsyncGenerator,
     root: str = "data",
-    tcp_connections: int = 256,
-    nb_workers: int = 256,
+    tcp_connections: int = 64,
+    nb_workers: int = 64,
     batch_size: int = 16,
     retries: int = 3,
     verbose: bool = False,

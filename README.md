@@ -57,7 +57,7 @@ generator:
 
 ```python
 import gbif_dl
-url_generator = gbif_dl.api.generate_urls(
+data_generator = gbif_dl.api.generate_urls(
     queries=queries,
     label="speciesKey",
 )
@@ -69,7 +69,7 @@ necessarily have to be part of the query attributes. The `label` is later used t
 Iterating over the generator now yields the media data returning a few thousand urls.
 
 ```python
-for i in url_generator:
+for i in data_generator:
     print(i)
 ```
 
@@ -109,7 +109,7 @@ Very often users won't be using all media downloads from a given query since thi
 In the following example, we will receive a balanced dataset assembled from `3 species * 2 datasets = 6 streams` and only get minumum number of total samples from all 6 streams:
 
 ```python
-url_generator = gbif_dl.api.generate_urls(
+data_generator = gbif_dl.api.generate_urls(
     queries=queries,
     label="speciesKey",
     nb_samples=-1,
@@ -125,7 +125,7 @@ For other, more advanced, use-cases users can add more constraints:
 The following dataset consist of exactly 1000 samples for which the distribution of `speciesKey` is maintained from the full query of all samples. Furthermore, we only allow a maxmimum of 800 samples per species.
 
 ```python
-url_generator = gbifmediads.api.generate_urls(
+data_generator = gbifmediads.api.generate_urls(
     queries=queries,
     label="speciesKey",
     nb_samples=1000,
@@ -141,10 +141,10 @@ A url generator can also be created from a GBIF download link given a registered
 
 * `dwca_root_path`: Set root path where to store the DWCA zip files. Defaults to None, which results in the creation of a temporary directory, If the path and DWCA archive already exist, it will not be downloaded again.
 
-The following example creates a url_generator with the the same output class label as in the example above.
+The following example creates a data_generator with the the same output class label as in the example above.
 
 ```python
-url_generator = gbif_dl.dwca.generate_urls(
+data_generator = gbif_dl.dwca.generate_urls(
     "10.15468/dl.vnm42s", dwca_root_path="dwcas", label="speciesKey"
 )
 ```
@@ -153,7 +153,7 @@ url_generator = gbif_dl.dwca.generate_urls(
 Downloading from a url generator can simply be done by running.
 
 ```python
-gbif_dl.io.download(url_generator, root="my_dataset")
+gbif_dl.io.download(data_generator, root="my_dataset")
 ```
 
 The downloader provides very fast download speeds by using an async queue. Some fail-safe functionality is provided by setting the number of `retries`, default to 3.
@@ -166,7 +166,7 @@ The downloader provides very fast download speeds by using an async queue. Some 
 
 ```python
 from gbif_dl.dataloaders.torch import GBIFImageDataset
-dataset = GBIFImageDataset(root='my_dataset', generator=url_generator, download=True)
+dataset = GBIFImageDataset(root='my_dataset', generator=data_generator, download=True)
 ```
 
 > ⚠️ Note that we do not provide train/validation/test splits of the dataset as this would be more useful to design specifically to the downstream task.

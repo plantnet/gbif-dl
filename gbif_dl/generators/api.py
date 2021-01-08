@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 def gbif_query_generator(
     page_limit: int = 300,
     mediatype: str = 'StillImage',
-    label: str = 'speciesKey',
+    label: Optional[str] = None,
     *args, **kwargs
 ) -> MediaData:
     """Performs media queries GBIF yielding url and label
@@ -26,7 +26,9 @@ def gbif_query_generator(
     Args:
         page_limit (int, optional): GBIF api uses paging which can be modified. Defaults to 300.
         mediatype (str, optional): Sets GBIF mediatype. Defaults to 'StillImage'.
-        label (str, optional): Sets label. Defaults to 'speciesKey'.
+        label (str, optional): Output label name. 
+            Defaults to `None` which yields all metadata.
+
 
     Returns:
         str: [description]
@@ -66,10 +68,15 @@ def gbif_query_generator(
                     media['identifier'].encode('utf-8')
                 ).hexdigest()
 
+                if label is not None:
+                    output_label = str(metadata.get(label))
+                else:
+                    output_label = metadata
+
                 yield {
                     "url": media['identifier'],
                     "basename": hashed_url,
-                    "label": str(metadata.get(label)),
+                    "label": output_label,
                     "content_type": content_type,
                     "suffix": mimetypes.guess_extension(str(content_type)),
                 }
@@ -108,7 +115,7 @@ def dproduct(dicts):
 
 def generate_urls(
     queries: Dict,
-    label: str = "speciesKey",
+    label: Optional[str] = None,
     split_streams_by: Optional[Union[str, List]] = None,
     nb_samples_per_stream: Optional[int] = None,
     nb_samples: Optional[int] = None,
@@ -122,8 +129,8 @@ def generate_urls(
     Args:
         queries (Dict): 
             dictionary of queries supported by the GBIF api
-        label (str, optional): label identfier, according to query api. 
-            Defaults to "speciesKey".
+        label (str, optional): Output label name. 
+            Defaults to `None` which yields all metadata.
         nb_samples (int):
             Limit the total number of samples retrieved from the API.
             When set to -1 and `split_streams_by` is not `None`,
