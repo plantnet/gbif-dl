@@ -8,10 +8,12 @@ import re
 import tempfile
 import shutil
 from typing import Optional
+import os
 
 from ..io import MediaData
 
 from dwca.read import DwCAReader
+from typing import Optional
 
 mmqualname = "http://purl.org/dc/terms/"
 gbifqualname = "http://rs.gbif.org/terms/1.0/"
@@ -20,7 +22,8 @@ gbifqualname = "http://rs.gbif.org/terms/1.0/"
 def dwca_generator(
     dwca_path: str,
     label: str = "speciesKey",
-    mediatype: str = 'StillImage'
+    mediatype: str = 'StillImage',
+    delete: Optional[bool] = False
 ) -> MediaData:
     """Yields media urls from GBIF Darwin Core Archive
 
@@ -28,6 +31,7 @@ def dwca_generator(
         dwca_path (str): path to darwin core zip file
         label (str, optional): Output label name. Defaults to "speciesKey".
         mediatype (str, optional): Media type. Defaults to 'StillImage'.
+        delete (bool, optional): Delete darwin core archive when finished.
 
     Yields:
         Dict: Item dictionary
@@ -69,6 +73,8 @@ def dwca_generator(
                 "suffix": mimetypes.guess_extension(str(content_type)),
             }
 
+    if delete:
+        os.remove(dwca_path)
 
 def doi_to_gbif_key(doi: str) -> str:
     """get gbif download id from doi
@@ -113,7 +119,8 @@ def generate_urls(
     identifier: str,
     dwca_root_path=None,
     label: Optional[str] = "speciesKey",
-    mediatype: Optional[str] = "StillImage"
+    mediatype: Optional[str] = "StillImage",
+    delete: Optional[bool] = False
 ):
     """Generate GBIF items from DOI or GBIF download key
 
@@ -124,7 +131,8 @@ def generate_urls(
             the creation of temporary directries
         label (str): output label
         mediatype (str, optional): Sets GBIF mediatype. Defaults to 'StillImage'.
-
+            the creation of temporary directories.
+        delete (bool, optional): Delete darwin core archive when finished.
 
     Returns:
         Iterable: item generator that yields files from generator
@@ -152,5 +160,6 @@ def generate_urls(
     return dwca_generator(
         dwca_path=dwca_path,
         label=label,
-        mediatype=mediatype
+        mediatype=mediatype,
+        delete=delete
     )
