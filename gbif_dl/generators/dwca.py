@@ -7,6 +7,7 @@ import mimetypes
 import re
 import tempfile
 import shutil
+from typing import Optional
 
 from ..io import MediaData
 
@@ -26,7 +27,7 @@ def dwca_generator(
     Args:
         dwca_path (str): path to darwin core zip file
         label (str, optional): Output label name. Defaults to "speciesKey".
-        type (str, optional): Media type. Defaults to 'StillImage'.
+        mediatype (str, optional): Media type. Defaults to 'StillImage'.
 
     Yields:
         Dict: Item dictionary
@@ -111,8 +112,8 @@ def _is_doi(identifier: str) -> bool:
 def generate_urls(
     identifier: str,
     dwca_root_path=None,
-    label: str = "speciesKey",
-    mediatype: str = "StillImage"
+    label: Optional[str] = "speciesKey",
+    mediatype: Optional[str] = "StillImage"
 ):
     """Generate GBIF items from DOI or GBIF download key
 
@@ -121,6 +122,9 @@ def generate_urls(
         dwca_root_path (str, optional): Set root path where to store 
             Darwin Core zip files. Defaults to None, which results in
             the creation of temporary directries
+        label (str): output label
+        mediatype (str, optional): Sets GBIF mediatype. Defaults to 'StillImage'.
+
 
     Returns:
         Iterable: item generator that yields files from generator
