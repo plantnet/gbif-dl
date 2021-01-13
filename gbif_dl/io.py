@@ -4,6 +4,11 @@ import threading
 from pathlib import Path
 from typing import AsyncGenerator, Callable, Generator, Union, Optional
 import sys
+import json
+import functools
+
+from attr import dataclass
+
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict  # pylint: disable=no-name-in-module
@@ -18,7 +23,7 @@ import aiohttp
 import aiostream
 from aiohttp_retry import RetryClient, ExponentialRetry
 from tqdm.asyncio import tqdm
-
+from .utils import watchdog, run_async
 
 class MediaData(TypedDict):
     """ Media dict representation received from api or dwca generators"""
@@ -54,8 +59,13 @@ async def download_single(
     """
     url = item['url']
 
-    # check for path
-    label_path = Path(root, item['label'])
+    # create subfolder when label is a single str
+    if isinstance(item['label'], str):
+        label_path = Path(root, item['label'])
+    # otherwise make it a flat file hierarchy
+    else:
+        label_path = Path(root)
+
     label_path.mkdir(parents=True, exist_ok=True)
 
     check_files_with_same_basename = label_path.glob(item['basename'] + "*")
@@ -91,6 +101,10 @@ async def download_single(
     async with aiofiles.open(file_path, "+wb") as f:
         await f.write(content)
 
+    if isinstance(item['label'], dict):
+        json_path = (label_path / item['basename']).with_suffix('.json')
+        async with aiofiles.open(json_path, mode='+w') as fp:
+            await fp.write(json.dumps(item['label']))
 
 async def download_queue(
     queue: asyncio.Queue,
@@ -133,8 +147,8 @@ async def download_queue(
 async def download_from_asyncgen(
     items: AsyncGenerator,
     root: str = "data",
-    tcp_connections: int = 256,
-    nb_workers: int = 256,
+    tcp_connections: int = 64,
+    nb_workers: int = 64,
     batch_size: int = 16,
     retries: int = 3,
     verbose: bool = False,
@@ -211,44 +225,6 @@ async def download_from_asyncgen(
 
     for w in workers:
         w.cancel()
-
-
-def get_or_create_eventloop():
-    try:
-        return asyncio.get_event_loop()
-    except RuntimeError as ex:
-        if "There is no current event loop in thread" in str(ex):
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            return asyncio.get_event_loop()
-
-class RunThread(threading.Thread):
-    def __init__(self, func, args, kwargs):
-        self.func = func
-        self.args = args
-        self.kwargs = kwargs
-        super().__init__()
-
-    def run(self):
-        self.result = asyncio.run(self.func(*self.args, **self.kwargs))
-
-
-def run_async(func, *args, **kwargs):
-    """async wrapper to detect if asyncio loop is already running
-
-    This is useful when already running in async thread.
-    """
-    try:
-        loop = get_or_create_eventloop()
-    except RuntimeError:
-        loop = None
-    if loop and loop.is_running():
-        thread = RunThread(func, args, kwargs)
-        thread.start()
-        thread.join()
-        return thread.result
-    else:
-        return asyncio.run(func(*args, **kwargs))
 
 
 def download(

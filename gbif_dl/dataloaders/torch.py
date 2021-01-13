@@ -10,7 +10,7 @@ import os
 
 
 class GBIFImageDataset(torchvision.datasets.ImageFolder):
-    """GBIF Image Dataset
+    """GBIF Image Dataset for multi-class classification
 
     Args:
         root (str): 

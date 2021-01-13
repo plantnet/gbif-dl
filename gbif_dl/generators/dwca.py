@@ -58,10 +58,15 @@ def dwca_generator(
                 url.encode('utf-8')
             ).hexdigest()
 
+            if label is not None:
+                output_label = str(row.data.get(gbifqualname + label))
+            else:
+                output_label = row.data
+
             yield {
                 "url": url,
                 "basename": hashed_url,
-                "label": str(row.data.get(gbifqualname + label))
+                "label": output_label,
             }
 
     if delete:
@@ -109,8 +114,8 @@ def _is_doi(identifier: str) -> bool:
 def generate_urls(
     identifier: str,
     dwca_root_path=None,
-    label: Optional[str] = "speciesKey",
-    mediatype: Optional[str] = "StillImage",
+    label: Optional[str] = None,
+    mediatype: Optional[str] = "StillImage"
     delete: Optional[bool] = False
 ):
     """Generate GBIF items from DOI or GBIF download key
@@ -120,7 +125,8 @@ def generate_urls(
         dwca_root_path (str, optional): Set root path where to store 
             Darwin Core zip files. Defaults to None, which results in
             the creation of temporary directries
-        label (str): output label
+        label (str, optional): Output label name. 
+            Defaults to `None` which yields all metadata.
         mediatype (str, optional): Sets GBIF mediatype. Defaults to 'StillImage'.
             the creation of temporary directories.
         delete (bool, optional): Delete darwin core archive when finished.
