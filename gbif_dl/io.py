@@ -153,7 +153,7 @@ async def download_from_asyncgen(
     retries: int = 3,
     verbose: bool = False,
     overwrite: bool = False,
-    is_valid_file: Optional[Callable[[bytes], bool]] = None
+    is_valid_file: Optional[Callable[[bytes], bool]] = None,
     proxy: Optional[str] = None
 ):
     """Asynchronous downloader that takes an interable and downloads it
@@ -207,7 +207,7 @@ async def download_from_asyncgen(
                     session,
                     root=root,
                     overwrite=overwrite,
-                    is_valid_file=is_valid_file
+                    is_valid_file=is_valid_file,
                     proxy=proxy
                 )
             )
@@ -236,7 +236,7 @@ def download(
     retries: int = 3,
     verbose: bool = False,
     overwrite: bool = False,
-    is_valid_file: Optional[Callable[[bytes], bool]] = None
+    is_valid_file: Optional[Callable[[bytes], bool]] = None,
     proxy: Optional[str] = None
 ):
     """Core download function that takes an interable (sync or async)
@@ -291,6 +291,6 @@ def download(
         retries=retries,
         verbose=verbose,
         overwrite=overwrite,
-        is_valid_file=is_valid_file
+        is_valid_file=is_valid_file,
         proxy=proxy
     )
