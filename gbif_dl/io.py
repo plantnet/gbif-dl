@@ -1,13 +1,10 @@
 import asyncio
 import inspect
-import threading
 from pathlib import Path
 from typing import AsyncGenerator, Callable, Generator, Union, Optional
 import sys
 import json
-import functools
-
-from attr import dataclass
+import hashlib
 
 
 if sys.version_info >= (3, 8):
@@ -31,7 +28,6 @@ class MediaData(TypedDict):
     basename: str
     label: str
 
-@watchdog
 async def download_single(
     item: MediaData,
     session: RetryClient,
@@ -57,18 +53,30 @@ async def download_single(
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
     """
-    url = item['url']
+    if isinstance(item, dict):
+        url = item.get('url')
+        label = item.get('label')
+        basename = item.get('basename')
+    else:
+        url = item
+        label, basename = None, None
 
     # create subfolder when label is a single str
-    if isinstance(item['label'], str):
-        label_path = Path(root, item['label'])
+    if isinstance(label, str):
+        label_path = Path(root, label)
     # otherwise make it a flat file hierarchy
     else:
         label_path = Path(root)
 
     label_path.mkdir(parents=True, exist_ok=True)
 
-    check_files_with_same_basename = label_path.glob(item['basename'] + "*")
+    if basename is None:
+        # hash the url, which later becomes the datatype
+        basename = hashlib.sha1(
+            url.encode('utf-8')
+        ).hexdigest()
+
+    check_files_with_same_basename = label_path.glob(basename + "*")
     if list(check_files_with_same_basename) and not overwrite:
         # do not overwrite, skips based on base path 
         return
@@ -95,15 +103,15 @@ async def download_single(
             print(f"File check failed")
             return
 
-    file_base_path = label_path / item['basename']
+    file_base_path = label_path / basename
     file_path = file_base_path.with_suffix(suffix)
     async with aiofiles.open(file_path, "+wb") as f:
         await f.write(content)
 
-    if isinstance(item['label'], dict):
+    if isinstance(label, dict):
         json_path = (label_path / item['basename']).with_suffix('.json')
         async with aiofiles.open(json_path, mode='+w') as fp:
-            await fp.write(json.dumps(item['label']))
+            await fp.write(json.dumps(label))
 
 async def download_queue(
     queue: asyncio.Queue,
