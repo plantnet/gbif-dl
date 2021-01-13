@@ -31,7 +31,6 @@ class MediaData(TypedDict):
     basename: str
     label: str
 
-@watchdog
 async def download_single(
     item: MediaData,
     session: RetryClient,
