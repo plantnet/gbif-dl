@@ -31,7 +31,7 @@ class MediaData(TypedDict):
     basename: str
     label: str
 
-
+@watchdog
 async def download_single(
     item: MediaData,
     session: RetryClient,
@@ -71,7 +71,6 @@ async def download_single(
     check_files_with_same_basename = label_path.glob(item['basename'] + "*")
     if list(check_files_with_same_basename) and not overwrite:
         # do not overwrite, skips based on base path 
-        print("skip")
         return
 
     async with session.get(url, proxy=proxy) as res:
@@ -139,7 +138,8 @@ async def download_queue(
                 session,
                 root,
                 is_valid_file,
-                overwrite
+                overwrite,
+                proxy
             )
         queue.task_done()
 
