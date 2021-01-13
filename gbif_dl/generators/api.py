@@ -53,15 +53,6 @@ def gbif_query_generator(
                 # multiple media can be attached
                 # select random url
                 media = random.choice(metadata['media'])
-                # in case the media format is not determined,
-                # we need to make another request to the webserver
-                # to get the content-type header
-                if media['format'] is None:
-                    h = requests.head(media['url'])
-                    header = h.headers
-                    content_type = header.get('content-type')
-                else:
-                    content_type = media['format']
 
                 # hash the url, which later becomes the datatype
                 hashed_url = hashlib.sha1(
@@ -77,8 +68,6 @@ def gbif_query_generator(
                     "url": media['identifier'],
                     "basename": hashed_url,
                     "label": output_label,
-                    "content_type": content_type,
-                    "suffix": mimetypes.guess_extension(str(content_type)),
                 }
 
         if resp['endOfRecords']:

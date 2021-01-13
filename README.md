@@ -79,23 +79,17 @@ each return entry is a dictionary of media attributes, to be consumed by the dow
 {
     'url': 'https://bs.plantnet.org/image/o/cfa25c7fb5cdf12719d1345769d3936d0ca73974', 
     'basename': 'fdcc3440ab0e3abf824a5c68c864b018cccfcd3b', 
-    'label': '5352251', 
-    'content_type': 'image/jpeg', 
-    'suffix': '.jpg'
+    'label': '5352251'
 },
 {
     'url': 'https://static.inaturalist.org/photos/58881180/original.jpeg?1577914533', 
     'basename': '7db818c0708ba859516353ff9b30ef942aca19de', 
-    'label': '3189866', 
-    'content_type': 'image/jpeg', 
-    'suffix': '.jpg'
+    'label': '3189866'
 },
 {
     'url': 'https://static.inaturalist.org/photos/58866788/original.jpeg?1577898729', 
     'basename': '58ae3ef46e59e9a06d67de09c8b7ef3b8db3c85a', 
-    'label': '3189866', 
-    'content_type': 'image/jpeg', 
-    'suffix': '.jpg'
+    'label': '3189866'
 }
 ```
 

@@ -6,6 +6,7 @@ import hashlib
 import mimetypes
 import re
 import tempfile
+import shutil
 from typing import Optional
 import os
 
@@ -28,10 +29,9 @@ def dwca_generator(
 
     Args:
         dwca_path (str): path to darwin core zip file
-    label (str, optional): Output label name. 
-        Defaults to `None` which yields all metadata.
-    mediatype (str, optional): Media type. Defaults to 'StillImage'.
-    delete (bool, optional): Delete darwin core archive when finished.
+        label (str, optional): Output label name. Defaults to "speciesKey".
+        mediatype (str, optional): Media type. Defaults to 'StillImage'.
+        delete (bool, optional): Delete darwin core archive when finished.
 
     Yields:
         Dict: Item dictionary
@@ -53,13 +53,6 @@ def dwca_generator(
 
             url = selected_img[mmqualname + 'identifier']
 
-            if selected_img.get(mmqualname + 'format') is None:
-                h = requests.head(url)
-                header = h.headers
-                content_type = header.get('content-type')
-            else:
-                content_type = selected_img[mmqualname + 'format']
-
             # hash the url, which later becomes the datatype
             hashed_url = hashlib.sha1(
                 url.encode('utf-8')
@@ -74,8 +67,6 @@ def dwca_generator(
                 "url": url,
                 "basename": hashed_url,
                 "label": output_label,
-                "content_type": content_type,
-                "suffix": mimetypes.guess_extension(str(content_type)),
             }
 
     if delete:
