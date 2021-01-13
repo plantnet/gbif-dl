@@ -33,7 +33,8 @@ async def download_single(
     session: RetryClient,
     root: str = "downloads",
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
-    overwrite: bool = False
+    overwrite: bool = False,
+    proxy: Optional[str] = None,
 ):
     """Async function to download single url to disk
 
@@ -45,7 +46,12 @@ async def download_single(
             and checks if the bytes originate from a valid file
             (used to check of corrupt files). Defaults to None.
         overwrite (bool):
-            overwrite existing files, Defaults to False.   
+            overwrite existing files, Defaults to False.
+        proxy (str):
+            proxy server url. Authentication credentials can be passed in URL.
+            e.g `proxy="http://user:pass@some.proxy.com"`.
+            Proxy can also be used globally using environmental variables.
+            See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
     """
     url = item['url']
 
@@ -58,7 +64,7 @@ async def download_single(
         # skip file instead of overwrite
         return
 
-    async with session.get(url) as res:
+    async with session.get(url, proxy=proxy) as res:
         content = await res.read()
 
     # Check everything went well
@@ -79,7 +85,8 @@ async def download_queue(
     queue: asyncio.Queue,
     session: RetryClient,
     root: str,
-    overwrite: bool = False 
+    overwrite: bool = False,
+    proxy: Optional[str] = None
 ):
     """Consumes items from download queue
 
@@ -89,11 +96,16 @@ async def download_queue(
         root (str, optional): root path.
         overwrite (bool):
             overwrite existing files, Defaults to False.
+        proxy (str):
+            proxy server url. Authentication credentials can be passed in URL.
+            e.g `proxy="http://user:pass@some.proxy.com"`.
+            Proxy can also be used globally using environmental variables.
+            See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
     """
     while True:
         batch = await queue.get()
         for sample in batch:
-            await download_single(sample, session, root, None, overwrite)
+            await download_single(sample, session, root, None, overwrite, proxy)
         queue.task_done()
 
 
@@ -105,7 +117,8 @@ async def download_from_asyncgen(
     batch_size: int = 16,
     retries: int = 3,
     verbose: bool = False,
-    overwrite: bool = False
+    overwrite: bool = False,
+    proxy: Optional[str] = None
 ):
     """Asynchronous downloader that takes an interable and downloads it
 
@@ -126,6 +139,12 @@ async def download_from_asyncgen(
             Activate verbose. Defaults to False.
         overwrite (bool):
             overwrite existing files, Defaults to False.
+        proxy (str):
+            proxy server url. Authentication credentials can be passed in URL.
+            e.g `proxy="http://user:pass@some.proxy.com"`.
+            Proxy can also be used globally using environmental variables.
+            See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
+
     Raises:
         NotImplementedError: If generator turns out to be invalid.
     """
@@ -137,12 +156,19 @@ async def download_from_asyncgen(
     async with RetryClient(
         connector=aiohttp.TCPConnector(limit=tcp_connections),
         raise_for_status=False,
-        retry_options=retry_options
+        retry_options=retry_options,
+        trust_env=True
     ) as session:
 
         workers = [
             asyncio.create_task(
-                download_queue(queue, session, root=root, overwrite=overwrite)
+                download_queue(
+                    queue,
+                    session,
+                    root=root,
+                    overwrite=overwrite,
+                    proxy=proxy
+                )
             )
             for _ in range(nb_workers)
         ]
@@ -207,6 +233,7 @@ def download(
     retries: int = 3,
     verbose: bool = False,
     overwrite: bool = False,
+    proxy: Optional[str] = None
 ):
     """Core download function that takes an interable (sync or async)
 
@@ -227,6 +254,11 @@ def download(
             Activate verbose. Defaults to False.
         overwrite (bool):
             overwrite existing files, Defaults to False.
+        proxy (str):
+            proxy server url. Authentication credentials can be passed in URL.
+            e.g `proxy="http://user:pass@some.proxy.com"`.
+            Proxy can also be used globally using environmental variables.
+            See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
 
     Raises:
         NotImplementedError: If generator turns out to be invalid.
@@ -250,5 +282,6 @@ def download(
         batch_size=batch_size,
         retries=retries,
         verbose=verbose,
-        overwrite=overwrite
+        overwrite=overwrite,
+        proxy=proxy
     )
