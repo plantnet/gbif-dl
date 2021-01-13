@@ -32,7 +32,8 @@ async def download_single(
     session: RetryClient,
     root: str = "downloads",
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
-    overwrite: bool = False
+    overwrite: bool = False,
+    proxy: Optional[str] = None,
 ):
     """Async function to download single url to disk
 
@@ -45,6 +46,11 @@ async def download_single(
             (used to check of corrupt files). Defaults to None.
         overwrite (bool):
             overwrite files with existing `baseline` signature, Defaults to False.
+        proxy (str):
+            proxy server url. Authentication credentials can be passed in URL.
+            e.g `proxy="http://user:pass@some.proxy.com"`.
+            Proxy can also be used globally using environmental variables.
+            See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
     """
     url = item['url']
 
@@ -58,7 +64,7 @@ async def download_single(
         print("skip")
         return
 
-    async with session.get(url) as res:
+    async with session.get(url, proxy=proxy) as res:
         content = await res.read()
 
     # guess mimetype and suffix from content
@@ -91,7 +97,8 @@ async def download_queue(
     session: RetryClient,
     root: str,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
-    overwrite: bool = False 
+    overwrite: bool = False,
+    proxy: Optional[str] = None
 ):
     """Consumes items from download queue
 
@@ -104,6 +111,11 @@ async def download_queue(
             (used to check of corrupt files). Defaults to None.
         overwrite (bool):
             overwrite files with existing `baseline` signature, Defaults to False.
+        proxy (str):
+            proxy server url. Authentication credentials can be passed in URL.
+            e.g `proxy="http://user:pass@some.proxy.com"`.
+            Proxy can also be used globally using environmental variables.
+            See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
     """
     while True:
         batch = await queue.get()
@@ -128,6 +140,7 @@ async def download_from_asyncgen(
     verbose: bool = False,
     overwrite: bool = False,
     is_valid_file: Optional[Callable[[bytes], bool]] = None
+    proxy: Optional[str] = None
 ):
     """Asynchronous downloader that takes an interable and downloads it
 
@@ -151,6 +164,13 @@ async def download_from_asyncgen(
         is_valid_file (optional): A function that takes bytes
             and checks if the bytes originate from a valid file
             (used to check of corrupt files). Defaults to None.
+            overwrite existing files, Defaults to False.
+        proxy (str):
+            proxy server url. Authentication credentials can be passed in URL.
+            e.g `proxy="http://user:pass@some.proxy.com"`.
+            Proxy can also be used globally using environmental variables.
+            See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
+
     Raises:
         NotImplementedError: If generator turns out to be invalid.
     """
@@ -162,7 +182,8 @@ async def download_from_asyncgen(
     async with RetryClient(
         connector=aiohttp.TCPConnector(limit=tcp_connections),
         raise_for_status=False,
-        retry_options=retry_options
+        retry_options=retry_options,
+        trust_env=True
     ) as session:
 
         workers = [
@@ -173,6 +194,7 @@ async def download_from_asyncgen(
                     root=root,
                     overwrite=overwrite,
                     is_valid_file=is_valid_file
+                    proxy=proxy
                 )
             )
             for _ in range(nb_workers)
@@ -239,6 +261,7 @@ def download(
     verbose: bool = False,
     overwrite: bool = False,
     is_valid_file: Optional[Callable[[bytes], bool]] = None
+    proxy: Optional[str] = None
 ):
     """Core download function that takes an interable (sync or async)
 
@@ -262,6 +285,12 @@ def download(
         is_valid_file (optional): A function that takes bytes
             and checks if the bytes originate from a valid file
             (used to check of corrupt files). Defaults to None.
+            overwrite existing files, Defaults to False.
+        proxy (str):
+            proxy server url. Authentication credentials can be passed in URL.
+            e.g `proxy="http://user:pass@some.proxy.com"`.
+            Proxy can also be used globally using environmental variables.
+            See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
 
     Raises:
         NotImplementedError: If generator turns out to be invalid.
@@ -287,4 +316,5 @@ def download(
         verbose=verbose,
         overwrite=overwrite,
         is_valid_file=is_valid_file
+        proxy=proxy
     )
