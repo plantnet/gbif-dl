@@ -115,7 +115,7 @@ def generate_urls(
     identifier: str,
     dwca_root_path=None,
     label: Optional[str] = None,
-    mediatype: Optional[str] = "StillImage"
+    mediatype: Optional[str] = "StillImage",
     delete: Optional[bool] = False
 ):
     """Generate GBIF items from DOI or GBIF download key
