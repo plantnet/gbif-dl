@@ -14,6 +14,7 @@ else:
 
 from collections.abc import Iterable
 
+
 import filetype
 import aiofiles
 import aiohttp
@@ -25,8 +26,9 @@ from .utils import watchdog, run_async
 class MediaData(TypedDict):
     """ Media dict representation received from api or dwca generators"""
     url: str
-    basename: str
-    label: str
+    basename: Optional[str]
+    label: Optional[str]
+    split: Optional[str]
 
 async def download_single(
     item: MediaData,
@@ -57,21 +59,25 @@ async def download_single(
         url = item.get('url')
         label = item.get('label')
         basename = item.get('basename')
+        split = item.get('split')
     else:
         url = item
-        label, basename = None, None
+        label, basename, split = None, None, None
+
+    label_path = Path(root)
+
+    if split is not None:
+        label_path /= Path(split)
 
     # create subfolder when label is a single str
     if isinstance(label, str):
-        label_path = Path(root, label)
-    # otherwise make it a flat file hierarchy
-    else:
-        label_path = Path(root)
+        # append label path
+        label_path /= Path(label)
 
     label_path.mkdir(parents=True, exist_ok=True)
 
     if basename is None:
-        # hash the url, which later becomes the datatype
+        # hash the url
         basename = hashlib.sha1(
             url.encode('utf-8')
         ).hexdigest()
