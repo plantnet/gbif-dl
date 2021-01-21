@@ -1,4 +1,5 @@
 
+import ipdb
 import pygbif
 import itertools as it
 import random
@@ -15,10 +16,12 @@ from typing import Dict, Optional, Union, List
 
 log = logging.getLogger(__name__)
 
+
 def gbif_query_generator(
     page_limit: int = 300,
     mediatype: str = 'StillImage',
     label: Optional[str] = None,
+    split: Optional[str] = None,
     *args, **kwargs
 ) -> MediaData:
     """Performs media queries GBIF yielding url and label
@@ -68,6 +71,7 @@ def gbif_query_generator(
                     "url": media['identifier'],
                     "basename": hashed_url,
                     "label": output_label,
+                    "split": split
                 }
 
         if resp['endOfRecords']:
@@ -106,6 +110,7 @@ def generate_urls(
     queries: Dict,
     label: Optional[str] = None,
     split_streams_by: Optional[Union[str, List]] = None,
+    streams_split: Optional[Union[str, Dict]] = None,
     nb_samples_per_stream: Optional[int] = None,
     nb_samples: Optional[int] = None,
     weighted_streams: bool = False,
@@ -132,7 +137,9 @@ def generate_urls(
             Defaults to `None` which retrieves all samples from stream until 
             stream generator is exhausted.
         split_streams_by (Optional[Union[str, List]], optional): 
-            Identifiers to be balanced. Defaults to None.
+            Stream identifiers to be balanced. Defaults to None.
+        streams_split (Optional[Union[str, Dict]], optional): 
+            Map certain put to be balanced. Defaults to None.
         weighted_streams (int):
             Calculates sampling weights for all streams and applies them during
             sampling. To be combined with nb_samples not `None`.
@@ -171,6 +178,8 @@ def generate_urls(
         # later we control the sampling processs of these streams to balance
         for b in dproduct(balance_queries):
             # for each stream we wrap into pescador Streamers for additional features
+
+            import ipdb; ipdb.set_trace()
             streams.append(
                 pescador.Streamer(
                     pescador.Streamer(
