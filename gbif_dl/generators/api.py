@@ -21,7 +21,7 @@ def gbif_query_generator(
     page_limit: int = 300,
     mediatype: str = 'StillImage',
     label: Optional[str] = None,
-    split: Optional[str] = None,
+    subset: Optional[str] = None,
     *args, **kwargs
 ) -> MediaData:
     """Performs media queries GBIF yielding url and label
@@ -29,9 +29,8 @@ def gbif_query_generator(
     Args:
         page_limit (int, optional): GBIF api uses paging which can be modified. Defaults to 300.
         mediatype (str, optional): Sets GBIF mediatype. Defaults to 'StillImage'.
-        label (str, optional): Output label name. 
-            Defaults to `None` which yields all metadata.
-
+        label (str, optional): Output label name. Defaults to `None`.
+        subset (str, optional): Subset name. Defaults to `None`.
 
     Returns:
         str: [description]
@@ -71,7 +70,7 @@ def gbif_query_generator(
                     "url": media['identifier'],
                     "basename": hashed_url,
                     "label": output_label,
-                    "split": split
+                    "subset": subset
                 }
 
         if resp['endOfRecords']:
@@ -110,7 +109,7 @@ def generate_urls(
     queries: Dict,
     label: Optional[str] = None,
     split_streams_by: Optional[Union[str, List]] = None,
-    streams_split: Optional[Union[str, Dict]] = None,
+    subset_streams: Optional[Union[str, Dict]] = None,
     nb_samples_per_stream: Optional[int] = None,
     nb_samples: Optional[int] = None,
     weighted_streams: bool = False,
@@ -138,8 +137,13 @@ def generate_urls(
             stream generator is exhausted.
         split_streams_by (Optional[Union[str, List]], optional): 
             Stream identifiers to be balanced. Defaults to None.
-        streams_split (Optional[Union[str, Dict]], optional): 
-            Map certain put to be balanced. Defaults to None.
+        subset_streams (Optional[Union[str, Dict]], optional): 
+            Map certain streams into separate subsets, by setting the `subset` 
+            metadata. Supports a remainder value of `"*"` which acts as a 
+            wildcard. E.g. `subset_streams={"train": { "speciesKey": [5352251, 3190653]},
+            "test": { "speciesKey": "*" }}` will move species of 5352251 and 3190653 
+            into `train` whereas all other species will go into test.
+            Defaults to None.
         weighted_streams (int):
             Calculates sampling weights for all streams and applies them during
             sampling. To be combined with nb_samples not `None`.
@@ -175,17 +179,33 @@ def generate_urls(
             balance_queries[key] = q.pop(key)
 
         # for each b in balance_queries, create a separate stream
-        # later we control the sampling processs of these streams to balance
+        # later we control the sampling processs of these streams to balance them
         for b in dproduct(balance_queries):
+            subset = None
             # for each stream we wrap into pescador Streamers for additional features
+            for key, value in b.items():
+                for x, y in subset_streams.items():
+                    result = y.get(key)
+                    if result is not None:
+                        if isinstance(result, list):
+                            for item in result:
+                                if value == item:
+                                    subset = x
+                        else:
+                            if value == result:
+                                subset = x
+                        
+                        # assign remainder class
+                        if result == "*" and subset is None:
+                            subset = x
 
-            import ipdb; ipdb.set_trace()
             streams.append(
                 pescador.Streamer(
                     pescador.Streamer(
                         gbif_query_generator,
                         label=label,
                         mediatype=mediatype,
+                        subset=subset,
                         **q,
                         **b
                     ),
