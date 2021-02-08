@@ -1,11 +1,11 @@
 import asyncio
 import inspect
 from pathlib import Path
-from typing import AsyncGenerator, Callable, Generator, Union, Optional
+from typing import AsyncGenerator, Callable, Dict, Generator, Union, Optional
 import sys
 import json
 import hashlib
-
+import random
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict  # pylint: disable=no-name-in-module
@@ -37,6 +37,7 @@ async def download_single(
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     overwrite: bool = False,
     proxy: Optional[str] = None,
+    random_splits: Optional[Dict] = None
 ):
     """Async function to download single url to disk
 
@@ -54,15 +55,25 @@ async def download_single(
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
+        random_splits (Dict):
+            add random splits given as a dict of class names and it's propability.
+            e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items 
+            go into a `train` subfolder and 10% go into 10%.
+            The propabilities have to sum up to `1.0` to avoid an error.
     """
     if isinstance(item, dict):
         url = item.get('url')
-        label = item.get('label')
         basename = item.get('basename')
+        label = item.get('label')
         split = item.get('split')
     else:
         url = item
         label, basename, split = None, None, None
+
+    if split is None and random_splits is not None:
+        split_choices = list(random_splits.keys())
+        p = list(random_splits.values())
+        split = random.choices(split_choices, weights=p, k=1)[0]
 
     label_path = Path(root)
 
@@ -125,7 +136,8 @@ async def download_queue(
     root: str,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     overwrite: bool = False,
-    proxy: Optional[str] = None
+    proxy: Optional[str] = None,
+    random_splits: Optional[Dict] = None
 ):
     """Consumes items from download queue
 
@@ -143,6 +155,11 @@ async def download_queue(
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
+        random_splits (Dict):
+            add random splits given as a dict of class names and it's propability.
+            e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items 
+            go into a `train` subfolder and 10% go into 10%.
+            The propabilities have to sum up to `1.0` to avoid an error.
     """
     while True:
         batch = await queue.get()
@@ -153,7 +170,8 @@ async def download_queue(
                 root,
                 is_valid_file,
                 overwrite,
-                proxy
+                proxy,
+                random_splits
             )
         queue.task_done()
 
@@ -168,7 +186,8 @@ async def download_from_asyncgen(
     verbose: bool = False,
     overwrite: bool = False,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
-    proxy: Optional[str] = None
+    proxy: Optional[str] = None,
+    random_splits: Optional[Dict] = None
 ):
     """Asynchronous downloader that takes an interable and downloads it
 
@@ -198,7 +217,11 @@ async def download_from_asyncgen(
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
-
+        random_splits (Dict):
+            add random splits given as a dict of class names and it's propability.
+            e.g. `{'train': 0.9, 'test': 0.1}` will result in 90% of the items 
+            go into a `train` subfolder and 10% go into 10%.
+            The propabilities have to sum up to `1.0` to avoid an error.
     Raises:
         NotImplementedError: If generator turns out to be invalid.
     """
@@ -222,7 +245,8 @@ async def download_from_asyncgen(
                     root=root,
                     overwrite=overwrite,
                     is_valid_file=is_valid_file,
-                    proxy=proxy
+                    proxy=proxy,
+                    random_splits=random_splits
                 )
             )
             for _ in range(nb_workers)
@@ -251,7 +275,8 @@ def download(
     verbose: bool = False,
     overwrite: bool = False,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
-    proxy: Optional[str] = None
+    proxy: Optional[str] = None,
+    random_splits: Optional[Dict] = None
 ):
     """Core download function that takes an interable (sync or async)
 
@@ -281,6 +306,11 @@ def download(
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
+        random_splits (Dict):
+            add random splits given as a dict of class names and it's propability.
+            e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items 
+            go into a `train` subfolder and 10% go into 10%.
+            The propabilities have to sum up to `1.0` to avoid an error.
 
     Raises:
         NotImplementedError: If generator turns out to be invalid.
@@ -295,6 +325,12 @@ def download(
             raise NotImplementedError(
                 "Provided iteratable could not be converted"
             )
+
+    if random_splits is not None:
+        p = random_splits.values()
+        if sum(p) != 1.0:
+            raise RuntimeError("Make sure that weight probabilities add up to one")
+
     return run_async(
         download_from_asyncgen,
         items,
@@ -306,5 +342,6 @@ def download(
         verbose=verbose,
         overwrite=overwrite,
         is_valid_file=is_valid_file,
-        proxy=proxy
+        proxy=proxy,
+        random_splits=random_splits
     )
