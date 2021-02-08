@@ -1,11 +1,8 @@
 
-import ipdb
 import pygbif
 import itertools as it
 import random
 import pescador
-import mimetypes
-import requests
 import hashlib
 import logging
 import numpy as np
