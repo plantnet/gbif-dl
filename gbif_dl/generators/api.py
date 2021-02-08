@@ -241,6 +241,7 @@ def generate_urls(
         return pescador.Streamer(
             gbif_query_generator,
             label=label,
+            mediatype=mediatype,
             max_iter=nb_samples,
             **q
         )
