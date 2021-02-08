@@ -28,7 +28,7 @@ class MediaData(TypedDict):
     url: str
     basename: Optional[str]
     label: Optional[str]
-    split: Optional[str]
+    subset: Optional[str]
 
 async def download_single(
     item: MediaData,
@@ -37,7 +37,7 @@ async def download_single(
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     overwrite: bool = False,
     proxy: Optional[str] = None,
-    random_splits: Optional[Dict] = None
+    random_subsets: Optional[Dict] = None
 ):
     """Async function to download single url to disk
 
@@ -55,8 +55,8 @@ async def download_single(
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
-        random_splits (Dict):
-            add random splits given as a dict of class names and it's propability.
+        random_subsets (Dict):
+            add random splits/subsets given as a dict of class names and it's propability.
             e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items 
             go into a `train` subfolder and 10% go into 10%.
             The propabilities have to sum up to `1.0` to avoid an error.
@@ -65,20 +65,20 @@ async def download_single(
         url = item.get('url')
         basename = item.get('basename')
         label = item.get('label')
-        split = item.get('split')
+        subset = item.get('subset')
     else:
         url = item
-        label, basename, split = None, None, None
+        label, basename, subset = None, None, None
 
-    if split is None and random_splits is not None:
-        split_choices = list(random_splits.keys())
-        p = list(random_splits.values())
-        split = random.choices(split_choices, weights=p, k=1)[0]
+    if subset is None and random_subsets is not None:
+        subset_choices = list(random_subsets.keys())
+        p = list(random_subsets.values())
+        subset = random.choices(subset_choices, weights=p, k=1)[0]
 
     label_path = Path(root)
 
-    if split is not None:
-        label_path /= Path(split)
+    if subset is not None:
+        label_path /= Path(subset)
 
     # create subfolder when label is a single str
     if isinstance(label, str):
@@ -137,7 +137,7 @@ async def download_queue(
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     overwrite: bool = False,
     proxy: Optional[str] = None,
-    random_splits: Optional[Dict] = None
+    random_subsets: Optional[Dict] = None
 ):
     """Consumes items from download queue
 
@@ -155,8 +155,8 @@ async def download_queue(
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
-        random_splits (Dict):
-            add random splits given as a dict of class names and it's propability.
+        random_subsets (Dict):
+            add random subset given as a dict of class names and it's propability.
             e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items 
             go into a `train` subfolder and 10% go into 10%.
             The propabilities have to sum up to `1.0` to avoid an error.
@@ -171,7 +171,7 @@ async def download_queue(
                 is_valid_file,
                 overwrite,
                 proxy,
-                random_splits
+                random_subsets
             )
         queue.task_done()
 
@@ -187,7 +187,7 @@ async def download_from_asyncgen(
     overwrite: bool = False,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     proxy: Optional[str] = None,
-    random_splits: Optional[Dict] = None
+    random_subsets: Optional[Dict] = None
 ):
     """Asynchronous downloader that takes an interable and downloads it
 
@@ -217,8 +217,8 @@ async def download_from_asyncgen(
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
-        random_splits (Dict):
-            add random splits given as a dict of class names and it's propability.
+        random_subsets (Dict):
+            add random subset given as a dict of class names and it's propability.
             e.g. `{'train': 0.9, 'test': 0.1}` will result in 90% of the items 
             go into a `train` subfolder and 10% go into 10%.
             The propabilities have to sum up to `1.0` to avoid an error.
@@ -246,7 +246,7 @@ async def download_from_asyncgen(
                     overwrite=overwrite,
                     is_valid_file=is_valid_file,
                     proxy=proxy,
-                    random_splits=random_splits
+                    random_subsets=random_subsets
                 )
             )
             for _ in range(nb_workers)
@@ -276,7 +276,7 @@ def download(
     overwrite: bool = False,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     proxy: Optional[str] = None,
-    random_splits: Optional[Dict] = None
+    random_subsets: Optional[Dict] = None
 ):
     """Core download function that takes an interable (sync or async)
 
@@ -306,8 +306,8 @@ def download(
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
-        random_splits (Dict):
-            add random splits given as a dict of class names and it's propability.
+        random_subsets (Dict):
+            add random subset given as a dict of class names and it's propability.
             e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items 
             go into a `train` subfolder and 10% go into 10%.
             The propabilities have to sum up to `1.0` to avoid an error.
@@ -326,8 +326,8 @@ def download(
                 "Provided iteratable could not be converted"
             )
 
-    if random_splits is not None:
-        p = random_splits.values()
+    if random_subsets is not None:
+        p = random_subsets.values()
         if sum(p) != 1.0:
             raise RuntimeError("Make sure that weight probabilities add up to one")
 
@@ -343,5 +343,5 @@ def download(
         overwrite=overwrite,
         is_valid_file=is_valid_file,
         proxy=proxy,
-        random_splits=random_splits
+        random_subsets=random_subsets
     )
