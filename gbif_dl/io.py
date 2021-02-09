@@ -58,7 +58,7 @@ async def download_single(
         random_subsets (Dict):
             add random splits/subsets given as a dict of class names and it's propability.
             e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items 
-            go into a `train` subfolder and 10% go into 10%.
+            go into a `train` subfolder and 10% go into a `test` subfolder.
             The propabilities have to sum up to `1.0` to avoid an error.
     """
     if isinstance(item, dict):
@@ -158,7 +158,7 @@ async def download_queue(
         random_subsets (Dict):
             add random subset given as a dict of class names and it's propability.
             e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items 
-            go into a `train` subfolder and 10% go into 10%.
+            go into a `train` subfolder and 10% go into a `test` subfolder.
             The propabilities have to sum up to `1.0` to avoid an error.
     """
     while True:
@@ -220,7 +220,7 @@ async def download_from_asyncgen(
         random_subsets (Dict):
             add random subset given as a dict of class names and it's propability.
             e.g. `{'train': 0.9, 'test': 0.1}` will result in 90% of the items 
-            go into a `train` subfolder and 10% go into 10%.
+            go into a `train` subfolder and 10% go into a `test` subfolder.
             The propabilities have to sum up to `1.0` to avoid an error.
     Raises:
         NotImplementedError: If generator turns out to be invalid.
@@ -309,7 +309,7 @@ def download(
         random_subsets (Dict):
             add random subset given as a dict of class names and it's propability.
             e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items 
-            go into a `train` subfolder and 10% go into 10%.
+            go into a `train` subfolder and 10% into a `test` subfolder.
             The propabilities have to sum up to `1.0` to avoid an error.
 
     Raises:
