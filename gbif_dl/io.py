@@ -1,11 +1,11 @@
 import asyncio
 import inspect
 from pathlib import Path
-from typing import AsyncGenerator, Callable, Generator, Union, Optional
+from typing import AsyncGenerator, Callable, Dict, Generator, Union, Optional
 import sys
 import json
 import hashlib
-
+import random
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict  # pylint: disable=no-name-in-module
@@ -13,6 +13,7 @@ else:
     from typing_extensions import TypedDict
 
 from collections.abc import Iterable
+
 
 import filetype
 import aiofiles
@@ -25,8 +26,9 @@ from .utils import watchdog, run_async
 class MediaData(TypedDict):
     """ Media dict representation received from api or dwca generators"""
     url: str
-    basename: str
-    label: str
+    basename: Optional[str]
+    label: Optional[str]
+    subset: Optional[str]
 
 async def download_single(
     item: MediaData,
@@ -35,6 +37,7 @@ async def download_single(
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     overwrite: bool = False,
     proxy: Optional[str] = None,
+    random_subsets: Optional[Dict] = None
 ):
     """Async function to download single url to disk
 
@@ -52,26 +55,40 @@ async def download_single(
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
+        random_subsets (Dict):
+            add random splits/subsets given as a dict of class names and it's propability.
+            e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items 
+            go into a `train` subfolder and 10% go into a `test` subfolder.
+            The propabilities have to sum up to `1.0` to avoid an error.
     """
     if isinstance(item, dict):
         url = item.get('url')
-        label = item.get('label')
         basename = item.get('basename')
+        label = item.get('label')
+        subset = item.get('subset')
     else:
         url = item
-        label, basename = None, None
+        label, basename, subset = None, None, None
+
+    if subset is None and random_subsets is not None:
+        subset_choices = list(random_subsets.keys())
+        p = list(random_subsets.values())
+        subset = random.choices(subset_choices, weights=p, k=1)[0]
+
+    label_path = Path(root)
+
+    if subset is not None:
+        label_path /= Path(subset)
 
     # create subfolder when label is a single str
     if isinstance(label, str):
-        label_path = Path(root, label)
-    # otherwise make it a flat file hierarchy
-    else:
-        label_path = Path(root)
+        # append label path
+        label_path /= Path(label)
 
     label_path.mkdir(parents=True, exist_ok=True)
 
     if basename is None:
-        # hash the url, which later becomes the datatype
+        # hash the url
         basename = hashlib.sha1(
             url.encode('utf-8')
         ).hexdigest()
@@ -119,7 +136,8 @@ async def download_queue(
     root: str,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     overwrite: bool = False,
-    proxy: Optional[str] = None
+    proxy: Optional[str] = None,
+    random_subsets: Optional[Dict] = None
 ):
     """Consumes items from download queue
 
@@ -137,6 +155,11 @@ async def download_queue(
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
+        random_subsets (Dict):
+            add random subset given as a dict of class names and it's propability.
+            e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items 
+            go into a `train` subfolder and 10% go into a `test` subfolder.
+            The propabilities have to sum up to `1.0` to avoid an error.
     """
     while True:
         batch = await queue.get()
@@ -147,7 +170,8 @@ async def download_queue(
                 root,
                 is_valid_file,
                 overwrite,
-                proxy
+                proxy,
+                random_subsets
             )
         queue.task_done()
 
@@ -162,7 +186,8 @@ async def download_from_asyncgen(
     verbose: bool = False,
     overwrite: bool = False,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
-    proxy: Optional[str] = None
+    proxy: Optional[str] = None,
+    random_subsets: Optional[Dict] = None
 ):
     """Asynchronous downloader that takes an interable and downloads it
 
@@ -192,7 +217,11 @@ async def download_from_asyncgen(
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
-
+        random_subsets (Dict):
+            add random subset given as a dict of class names and it's propability.
+            e.g. `{'train': 0.9, 'test': 0.1}` will result in 90% of the items 
+            go into a `train` subfolder and 10% go into a `test` subfolder.
+            The propabilities have to sum up to `1.0` to avoid an error.
     Raises:
         NotImplementedError: If generator turns out to be invalid.
     """
@@ -216,7 +245,8 @@ async def download_from_asyncgen(
                     root=root,
                     overwrite=overwrite,
                     is_valid_file=is_valid_file,
-                    proxy=proxy
+                    proxy=proxy,
+                    random_subsets=random_subsets
                 )
             )
             for _ in range(nb_workers)
@@ -245,7 +275,8 @@ def download(
     verbose: bool = False,
     overwrite: bool = False,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
-    proxy: Optional[str] = None
+    proxy: Optional[str] = None,
+    random_subsets: Optional[Dict] = None
 ):
     """Core download function that takes an interable (sync or async)
 
@@ -275,6 +306,11 @@ def download(
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
+        random_subsets (Dict):
+            add random subset given as a dict of class names and it's propability.
+            e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items 
+            go into a `train` subfolder and 10% into a `test` subfolder.
+            The propabilities have to sum up to `1.0` to avoid an error.
 
     Raises:
         NotImplementedError: If generator turns out to be invalid.
@@ -289,6 +325,12 @@ def download(
             raise NotImplementedError(
                 "Provided iteratable could not be converted"
             )
+
+    if random_subsets is not None:
+        p = random_subsets.values()
+        if sum(p) != 1.0:
+            raise RuntimeError("Make sure that weight probabilities add up to one")
+
     return run_async(
         download_from_asyncgen,
         items,
@@ -300,5 +342,6 @@ def download(
         verbose=verbose,
         overwrite=overwrite,
         is_valid_file=is_valid_file,
-        proxy=proxy
+        proxy=proxy,
+        random_subsets=random_subsets
     )
