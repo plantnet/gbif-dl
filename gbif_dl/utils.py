@@ -2,8 +2,10 @@ import asyncio
 import functools
 import threading
 
+
 def watchdog(afunc):
     """Stops all tasks if there is an error"""
+
     @functools.wraps(afunc)
     async def run(*args, **kwargs):
         try:
@@ -11,8 +13,9 @@ def watchdog(afunc):
         except asyncio.CancelledError:
             return
         except Exception as err:
-            print(f'exception {err}')
+            print(f"exception {err}")
         asyncio.get_event_loop().stop()
+
     return run
 
 
