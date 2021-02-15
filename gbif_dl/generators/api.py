@@ -1,4 +1,3 @@
-
 import pygbif
 import itertools as it
 import random
@@ -16,10 +15,11 @@ log = logging.getLogger(__name__)
 
 def gbif_query_generator(
     page_limit: int = 300,
-    mediatype: str = 'StillImage',
+    mediatype: str = "StillImage",
     label: Optional[str] = None,
     subset: Optional[str] = None,
-    *args, **kwargs
+    *args,
+    **kwargs,
 ) -> MediaData:
     """Performs media queries GBIF yielding url and label
 
@@ -39,24 +39,19 @@ def gbif_query_generator(
 
     while True:
         resp = pygbif.occurrences.search(
-            mediatype=mediatype,
-            offset=offset,
-            limit=page_limit,
-            *args, **kwargs
+            mediatype=mediatype, offset=offset, limit=page_limit, *args, **kwargs
         )
 
         # Iterate over request pages. Can possibly also done async
-        for metadata in resp['results']:
+        for metadata in resp["results"]:
             # check if media key is present
-            if metadata['media']:
+            if metadata["media"]:
                 # multiple media can be attached
                 # select random url
-                media = random.choice(metadata['media'])
+                media = random.choice(metadata["media"])
 
                 # hash the url, which later becomes the datatype
-                hashed_url = hashlib.sha1(
-                    media['identifier'].encode('utf-8')
-                ).hexdigest()
+                hashed_url = hashlib.sha1(media["identifier"].encode("utf-8")).hexdigest()
 
                 if label is not None:
                     output_label = str(metadata.get(label))
@@ -64,22 +59,19 @@ def gbif_query_generator(
                     output_label = metadata
 
                 yield {
-                    "url": media['identifier'],
+                    "url": media["identifier"],
                     "basename": hashed_url,
                     "label": output_label,
-                    "subset": subset
+                    "subset": subset,
                 }
 
-        if resp['endOfRecords']:
+        if resp["endOfRecords"]:
             break
         else:
-            offset = resp['offset'] + page_limit
+            offset = resp["offset"] + page_limit
 
 
-def gbif_count(
-    mediatype: str = 'StillImage',
-    *args, **kwargs
-) -> str:
+def gbif_count(mediatype: str = "StillImage", *args, **kwargs) -> str:
     """Count the number of occurances from given query
 
     Args:
@@ -89,16 +81,11 @@ def gbif_count(
         str: [description]
     """
 
-    return pygbif.occurrences.search(
-        limit=0,
-        mediatype=mediatype,
-        *args, **kwargs
-    )['count']
+    return pygbif.occurrences.search(limit=0, mediatype=mediatype, *args, **kwargs)["count"]
 
 
 def dproduct(dicts):
-    """Returns the products of dicts
-    """
+    """Returns the products of dicts"""
     return (dict(zip(dicts, x)) for x in it.product(*dicts.values()))
 
 
@@ -117,9 +104,9 @@ def generate_urls(
     """Provides url generator from given query
 
     Args:
-        queries (Dict): 
+        queries (Dict):
             dictionary of queries supported by the GBIF api
-        label (str, optional): Output label name. 
+        label (str, optional): Output label name.
             Defaults to `None` which yields all metadata.
         nb_samples (int):
             Limit the total number of samples retrieved from the API.
@@ -130,15 +117,15 @@ def generate_urls(
             all streams are exchausted.
         nb_samples_per_stream (int):
             Limit the maximum number of items to be retrieved per stream.
-            Defaults to `None` which retrieves all samples from stream until 
+            Defaults to `None` which retrieves all samples from stream until
             stream generator is exhausted.
-        split_streams_by (Optional[Union[str, List]], optional): 
+        split_streams_by (Optional[Union[str, List]], optional):
             Stream identifiers to be balanced. Defaults to None.
-        subset_streams (Optional[Union[str, Dict]], optional): 
-            Map certain streams into separate subsets, by setting the `subset` 
-            metadata. Supports a remainder value of `"*"` which acts as a 
+        subset_streams (Optional[Union[str, Dict]], optional):
+            Map certain streams into separate subsets, by setting the `subset`
+            metadata. Supports a remainder value of `"*"` which acts as a
             wildcard. E.g. `subset_streams={"train": { "speciesKey": [5352251, 3190653]},
-            "test": { "speciesKey": "*" }}` will move species of 5352251 and 3190653 
+            "test": { "speciesKey": "*" }}` will move species of 5352251 and 3190653
             into `train` whereas all other species will go into test.
             Defaults to None.
         weighted_streams (int):
@@ -191,7 +178,7 @@ def generate_urls(
                         else:
                             if value == result:
                                 subset = x
-                        
+
                         # assign remainder class
                         if result == "*" and subset is None:
                             subset = x
@@ -204,18 +191,17 @@ def generate_urls(
                         mediatype=mediatype,
                         subset=subset,
                         **q,
-                        **b
+                        **b,
                     ),
                     # this makes sure that we only obtain a maximum number
                     # of samples per stream
-                    max_iter=nb_samples_per_stream
+                    max_iter=nb_samples_per_stream,
                 )
             )
 
         if verbose:
             nb_queries = [
-                gbif_count(mediatype=mediatype, **q, **b)
-                for b in dproduct(balance_queries)
+                gbif_count(mediatype=mediatype, **q, **b) for b in dproduct(balance_queries)
             ]
             print(sum(nb_queries))
 
@@ -224,10 +210,7 @@ def generate_urls(
         if nb_samples == -1:
             # calculate the miniumum number of samples available per stream
             nb_samples = min(
-                [
-                    gbif_count(mediatype=mediatype, **q, **b)
-                    for b in dproduct(balance_queries)
-                ]
+                [gbif_count(mediatype=mediatype, **q, **b) for b in dproduct(balance_queries)]
             ) * len(streams)
 
         if weighted_streams:
@@ -246,7 +229,7 @@ def generate_urls(
             n_active=len(streams),  # all streams are always active.
             rate=None,  # all streams are balanced
             weights=weights,  # weight streams
-            mode="exhaustive"  # if one stream fails it is not revived
+            mode="exhaustive",  # if one stream fails it is not revived
         )
         return mux(max_iter=nb_samples)
 
@@ -256,9 +239,5 @@ def generate_urls(
             nb_samples = min(nb_samples, nb_samples_per_stream)
 
         return pescador.Streamer(
-            gbif_query_generator,
-            label=label,
-            mediatype=mediatype,
-            max_iter=nb_samples,
-            **q
+            gbif_query_generator, label=label, mediatype=mediatype, max_iter=nb_samples, **q
         )

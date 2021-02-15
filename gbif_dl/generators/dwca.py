@@ -22,8 +22,8 @@ gbifqualname = "http://rs.gbif.org/terms/1.0/"
 def dwca_generator(
     dwca_path: str,
     label: str = "speciesKey",
-    mediatype: str = 'StillImage',
-    delete: Optional[bool] = False
+    mediatype: str = "StillImage",
+    delete: Optional[bool] = False,
 ) -> MediaData:
     """Yields media urls from GBIF Darwin Core Archive
 
@@ -41,22 +41,18 @@ def dwca_generator(
             img_extensions = []
             for ext in row.extensions:
                 # multiple images are handled as multiple extensions
-                # therefore lets filter the images first and then 
+                # therefore lets filter the images first and then
                 # yield a random one
-                if ext.rowtype == gbifqualname + 'Multimedia':
-                    if ext.data[mmqualname + 'type'] == mediatype:
+                if ext.rowtype == gbifqualname + "Multimedia":
+                    if ext.data[mmqualname + "type"] == mediatype:
                         img_extensions.append(ext.data)
 
-            selected_img = random.choice(
-                img_extensions
-            )
+            selected_img = random.choice(img_extensions)
 
-            url = selected_img[mmqualname + 'identifier']
+            url = selected_img[mmqualname + "identifier"]
 
             # hash the url, which later becomes the datatype
-            hashed_url = hashlib.sha1(
-                url.encode('utf-8')
-            ).hexdigest()
+            hashed_url = hashlib.sha1(url.encode("utf-8")).hexdigest()
 
             if label is not None:
                 output_label = str(row.data.get(gbifqualname + label))
@@ -72,6 +68,7 @@ def dwca_generator(
     if delete:
         os.remove(dwca_path)
 
+
 def doi_to_gbif_key(doi: str) -> str:
     """get gbif download id from doi
 
@@ -81,13 +78,14 @@ def doi_to_gbif_key(doi: str) -> str:
     Returns:
         str: gbif id
     """
-    r = requests.get('https://api.datacite.org/dois/' + doi)
+    r = requests.get("https://api.datacite.org/dois/" + doi)
     if r.status_code == requests.codes.ok:
-        gbif_url = r.json().get('data').get('attributes').get('url')
+        gbif_url = r.json().get("data").get("attributes").get("url")
         if gbif_url is not None:
-            gbif_key = gbif_url.split('/')[-1]
-            if bool(re.match('^[0-9\-]*$', gbif_key)):
+            gbif_key = gbif_url.split("/")[-1]
+            if bool(re.match("^[0-9\-]*$", gbif_key)):
                 return gbif_key
+
 
 def _is_doi(identifier: str) -> bool:
     """Validates if identifier is a valid DOI
@@ -103,7 +101,7 @@ def _is_doi(identifier: str) -> bool:
         r"(10.\d{4,9}/[-._;()/:A-Z0-9]+)",
         r"(10.\d{4}/\d+-\d+X?(\d+)\d+<[\d\w]+:[\d\w]*>\d+.\d+.\w+;\d)",
         r"(10.1021/\w\w\d+)",
-        r"(10.1207/[\w\d]+\&\d+_\d+)"
+        r"(10.1207/[\w\d]+\&\d+_\d+)",
     ]
     for pattern in doi_patterns:
         match = bool(re.match(pattern, identifier))
@@ -111,21 +109,22 @@ def _is_doi(identifier: str) -> bool:
             return True
     return False
 
+
 def generate_urls(
     identifier: str,
     dwca_root_path=None,
     label: Optional[str] = None,
     mediatype: Optional[str] = "StillImage",
-    delete: Optional[bool] = False
+    delete: Optional[bool] = False,
 ):
     """Generate GBIF items from DOI or GBIF download key
 
     Args:
         identifier (str): doi or gbif key
-        dwca_root_path (str, optional): Set root path where to store 
+        dwca_root_path (str, optional): Set root path where to store
             Darwin Core zip files. Defaults to None, which results in
             the creation of temporary directries
-        label (str, optional): Output label name. 
+        label (str, optional): Output label name.
             Defaults to `None` which yields all metadata.
         mediatype (str, optional): Sets GBIF mediatype. Defaults to 'StillImage'.
             the creation of temporary directories.
@@ -145,18 +144,10 @@ def generate_urls(
     # download darwin core archive
     dwca_root_path = Path(dwca_root_path)
     dwca_root_path.mkdir(parents=True, exist_ok=True)
-    dwca_path = Path(dwca_root_path, key + '.zip')
+    dwca_path = Path(dwca_root_path, key + ".zip")
     if not dwca_path.exists():
-        r = pygbif.occurrences.download_get(
-            key=key,
-            path=dwca_root_path
-        )
-        dwca_path = r['path']
+        r = pygbif.occurrences.download_get(key=key, path=dwca_root_path)
+        dwca_path = r["path"]
 
     # extract media urls and return item generator
-    return dwca_generator(
-        dwca_path=dwca_path,
-        label=label,
-        mediatype=mediatype,
-        delete=delete
-    )
+    return dwca_generator(dwca_path=dwca_path, label=label, mediatype=mediatype, delete=delete)

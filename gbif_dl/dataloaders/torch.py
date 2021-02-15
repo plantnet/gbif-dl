@@ -1,7 +1,7 @@
 try:
     import torchvision
 except ImportError:
-    raise ImportError('Please install PyTorch and Torchvision')
+    raise ImportError("Please install PyTorch and Torchvision")
 
 from typing import AsyncGenerator, Optional, Union, Generator, Any, Iterable
 
@@ -13,19 +13,20 @@ class GBIFImageDataset(torchvision.datasets.ImageFolder):
     """GBIF Image Dataset for multi-class classification
 
     Args:
-        root (str): 
+        root (str):
             Root path of dataset
         generator (Optional[Union[Generator, AsyncGenerator, Iterable]]):
             Url list generator.
-        download (Optional[bool], optional): 
+        download (Optional[bool], optional):
             Enable download (if root path does not exist)
     """
+
     def __init__(
         self,
         root: str,
         generator: Optional[Union[Generator, AsyncGenerator, Iterable]],
-        download: bool = True, 
-        **kwargs: Any
+        download: bool = True,
+        **kwargs: Any,
     ) -> None:
 
         self.root = os.path.expanduser(root)
