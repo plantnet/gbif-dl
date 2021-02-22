@@ -21,7 +21,7 @@ import aiohttp
 import aiostream
 from aiohttp_retry import RetryClient, ExponentialRetry
 from tqdm.asyncio import tqdm
-from .utils import watchdog, run_async
+from .utils import run_async
 
 
 class MediaData(TypedDict):
