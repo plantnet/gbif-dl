@@ -233,8 +233,9 @@ async def download_from_asyncgen(
         trust_env=True,
     ) as session:
 
+        loop = asyncio.get_event_loop()
         workers = [
-            asyncio.create_task(
+            loop.create_task(
                 download_queue(
                     queue,
                     session,
