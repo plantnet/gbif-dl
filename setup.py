@@ -26,12 +26,12 @@ setup(
         "python-dwca-reader",
         "filetype>=1.0.0",
         "tqdm",
-        "typing-extensions; python_version < '3.8'"
+        "typing-extensions; python_version < '3.8'",
     ],
     extras_require={
         "tests": ["pytest"],
-        "torch":  ["torch>=1.7.0", "torchvision"],
-        "tensorflow": ["tensorflow>=2.4.0"]
+        "torch": ["torch>=1.7.0", "torchvision"],
+        "tensorflow": ["tensorflow>=2.4.0"],
     },
     # entry_points={"console_scripts": ["gbif_dl=gbif_dl.cli:download"]},
     packages=find_packages(),
@@ -39,6 +39,7 @@ setup(
     classifiers=[
         "Development Status :: 4 - Beta",
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
