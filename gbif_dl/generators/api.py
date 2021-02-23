@@ -168,20 +168,21 @@ def generate_urls(
             subset = None
             # for each stream we wrap into pescador Streamers for additional features
             for key, value in b.items():
-                for x, y in subset_streams.items():
-                    result = y.get(key)
-                    if result is not None:
-                        if isinstance(result, list):
-                            for item in result:
-                                if value == item:
+                if subset_streams is not None:
+                    for x, y in subset_streams.items():
+                        result = y.get(key)
+                        if result is not None:
+                            if isinstance(result, list):
+                                for item in result:
+                                    if value == item:
+                                        subset = x
+                            else:
+                                if value == result:
                                     subset = x
-                        else:
-                            if value == result:
-                                subset = x
 
-                        # assign remainder class
-                        if result == "*" and subset is None:
-                            subset = x
+                            # assign remainder class
+                            if result == "*" and subset is None:
+                                subset = x
 
             streams.append(
                 pescador.Streamer(
