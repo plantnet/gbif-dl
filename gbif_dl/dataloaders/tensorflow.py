@@ -10,12 +10,7 @@ from .. import io
 
 
 def create_dataset_from_generator(
-    generator,
-    root: str,
-    download: bool = True,
-    download_args: dict = {},
-    *args: Any,
-    **kwargs: Any
+    generator, root: str, download: bool = True, download_args: dict = {}, *args: Any, **kwargs: Any
 ) -> tf.data.Dataset:
     """Creates tensorflow dataset from generator
 
