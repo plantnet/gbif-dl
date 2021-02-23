@@ -1,6 +1,7 @@
 import asyncio
 import functools
 import threading
+from . import runners
 
 
 def watchdog(afunc):
@@ -37,7 +38,7 @@ class RunThread(threading.Thread):
         super().__init__()
 
     def run(self):
-        self.result = asyncio.run(self.func(*self.args, **self.kwargs))
+        self.result = runners.run(self.func(*self.args, **self.kwargs))
 
 
 def run_async(func, *args, **kwargs):
@@ -55,4 +56,4 @@ def run_async(func, *args, **kwargs):
         thread.join()
         return thread.result
     else:
-        return asyncio.run(func(*args, **kwargs))
+        return runners.run(func(*args, **kwargs))
