@@ -1,5 +1,4 @@
 import pytest
-import gbif_dl
 from gbif_dl.dataloaders import torch as torchloader
 
 
