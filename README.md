@@ -1,6 +1,6 @@
 # gbif-dl 🌱 > 💾
 
-[![Build Status](https://travis-ci.com/plantnet/gbif-dl.svg?branch=master)](https://travis-ci.com/plantnet/gbif-dl) [![Latest Version](https://img.shields.io/pypi/v/gbif-dl.svg)](https://pypi.python.org/pypi/gbif-dl)
+[![Build Status](https://github.com/plantnet/gbif-dl/workflows/CI/badge.svg)](https://github.com/plantnet/gbif-dl/actions?query=workflow%3ACI+branch%3Amaster+event%3Apush)
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/gbif-dl.svg)](https://pypi.python.org/pypi/gbif-dl)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3269749.svg)](https://doi.org/10.5281/zenodo.3269749)
 [![Docker hub](https://img.shields.io/docker/cloud/build/plantnet/gbif-dl)](https://cloud.docker.com/u/plantnet/repository/docker/plantnet/gbif-dl)
@@ -51,6 +51,7 @@ queries = {
     ]
 }
 ```
+
 
 Give this query, we can pass this to the `api.generate_urls` function which returns a python
 generator:

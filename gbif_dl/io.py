@@ -1,14 +1,11 @@
 import asyncio
 import inspect
-import threading
 from pathlib import Path
-from typing import AsyncGenerator, Callable, Generator, Union, Optional
+from typing import AsyncGenerator, Callable, Dict, Generator, Union, Optional
 import sys
 import json
-import functools
-
-from attr import dataclass
-
+import hashlib
+import random
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict  # pylint: disable=no-name-in-module
@@ -16,6 +13,7 @@ else:
     from typing_extensions import TypedDict
 
 from collections.abc import Iterable
+
 
 import filetype
 import aiofiles
@@ -25,13 +23,16 @@ from aiohttp_retry import RetryClient, ExponentialRetry
 from tqdm.asyncio import tqdm
 from .utils import watchdog, run_async
 
+
 class MediaData(TypedDict):
     """ Media dict representation received from api or dwca generators"""
-    url: str
-    basename: str
-    label: str
 
-@watchdog
+    url: str
+    basename: Optional[str]
+    label: Optional[str]
+    subset: Optional[str]
+
+
 async def download_single(
     item: MediaData,
     session: RetryClient,
@@ -39,6 +40,7 @@ async def download_single(
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     overwrite: bool = False,
     proxy: Optional[str] = None,
+    random_subsets: Optional[Dict] = None,
 ):
     """Async function to download single url to disk
 
@@ -56,21 +58,45 @@ async def download_single(
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
+        random_subsets (Dict):
+            add random splits/subsets given as a dict of class names and it's propability.
+            e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items
+            go into a `train` subfolder and 10% go into a `test` subfolder.
+            The propabilities have to sum up to `1.0` to avoid an error.
     """
-    url = item['url']
+    if isinstance(item, dict):
+        url = item.get("url")
+        basename = item.get("basename")
+        label = item.get("label")
+        subset = item.get("subset")
+    else:
+        url = item
+        label, basename, subset = None, None, None
+
+    if subset is None and random_subsets is not None:
+        subset_choices = list(random_subsets.keys())
+        p = list(random_subsets.values())
+        subset = random.choices(subset_choices, weights=p, k=1)[0]
+
+    label_path = Path(root)
+
+    if subset is not None:
+        label_path /= Path(subset)
 
     # create subfolder when label is a single str
-    if isinstance(item['label'], str):
-        label_path = Path(root, item['label'])
-    # otherwise make it a flat file hierarchy
-    else:
-        label_path = Path(root)
+    if isinstance(label, str):
+        # append label path
+        label_path /= Path(label)
 
     label_path.mkdir(parents=True, exist_ok=True)
 
-    check_files_with_same_basename = label_path.glob(item['basename'] + "*")
+    if basename is None:
+        # hash the url
+        basename = hashlib.sha1(url.encode("utf-8")).hexdigest()
+
+    check_files_with_same_basename = label_path.glob(basename + "*")
     if list(check_files_with_same_basename) and not overwrite:
-        # do not overwrite, skips based on base path 
+        # do not overwrite, skips based on base path
         return
 
     async with session.get(url, proxy=proxy) as res:
@@ -79,7 +105,7 @@ async def download_single(
     # guess mimetype and suffix from content
     kind = filetype.guess(content)
     if kind is None:
-        print('Cannot guess file type!')
+        print("Cannot guess file type!")
         return
     else:
         suffix = "." + kind.extension
@@ -95,15 +121,16 @@ async def download_single(
             print(f"File check failed")
             return
 
-    file_base_path = label_path / item['basename']
+    file_base_path = label_path / basename
     file_path = file_base_path.with_suffix(suffix)
     async with aiofiles.open(file_path, "+wb") as f:
         await f.write(content)
 
-    if isinstance(item['label'], dict):
-        json_path = (label_path / item['basename']).with_suffix('.json')
-        async with aiofiles.open(json_path, mode='+w') as fp:
-            await fp.write(json.dumps(item['label']))
+    if isinstance(label, dict):
+        json_path = (label_path / item["basename"]).with_suffix(".json")
+        async with aiofiles.open(json_path, mode="+w") as fp:
+            await fp.write(json.dumps(label))
+
 
 async def download_queue(
     queue: asyncio.Queue,
@@ -111,7 +138,8 @@ async def download_queue(
     root: str,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     overwrite: bool = False,
-    proxy: Optional[str] = None
+    proxy: Optional[str] = None,
+    random_subsets: Optional[Dict] = None,
 ):
     """Consumes items from download queue
 
@@ -129,17 +157,17 @@ async def download_queue(
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
+        random_subsets (Dict):
+            add random subset given as a dict of class names and it's propability.
+            e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items
+            go into a `train` subfolder and 10% go into a `test` subfolder.
+            The propabilities have to sum up to `1.0` to avoid an error.
     """
     while True:
         batch = await queue.get()
         for sample in batch:
             await download_single(
-                sample,
-                session,
-                root,
-                is_valid_file,
-                overwrite,
-                proxy
+                sample, session, root, is_valid_file, overwrite, proxy, random_subsets
             )
         queue.task_done()
 
@@ -154,7 +182,8 @@ async def download_from_asyncgen(
     verbose: bool = False,
     overwrite: bool = False,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
-    proxy: Optional[str] = None
+    proxy: Optional[str] = None,
+    random_subsets: Optional[Dict] = None,
 ):
     """Asynchronous downloader that takes an interable and downloads it
 
@@ -163,7 +192,7 @@ async def download_from_asyncgen(
             (async/sync) generator that yiels a standardized dict of urls
         root (str, optional):
             Root path of downloads. Defaults to "data".
-        tcp_connections (int, optional): 
+        tcp_connections (int, optional):
             Maximum number of concurrent TCP connections. Defaults to 128.
         nb_workers (int, optional):
             Maximum number of workers. Defaults to 128.
@@ -171,7 +200,7 @@ async def download_from_asyncgen(
             Maximum queue batch size. Defaults to 8.
         retries (int, optional):
             Maximum number of retries. Defaults to 3.
-        verbose (bool, if isinstance(e, Iterable):ptional): 
+        verbose (bool, if isinstance(e, Iterable):ptional):
             Activate verbose. Defaults to False.
         overwrite (bool):
             overwrite files with existing `baseline` signature, Defaults to False.
@@ -184,7 +213,11 @@ async def download_from_asyncgen(
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
-
+        random_subsets (Dict):
+            add random subset given as a dict of class names and it's propability.
+            e.g. `{'train': 0.9, 'test': 0.1}` will result in 90% of the items
+            go into a `train` subfolder and 10% go into a `test` subfolder.
+            The propabilities have to sum up to `1.0` to avoid an error.
     Raises:
         NotImplementedError: If generator turns out to be invalid.
     """
@@ -197,7 +230,7 @@ async def download_from_asyncgen(
         connector=aiohttp.TCPConnector(limit=tcp_connections),
         raise_for_status=False,
         retry_options=retry_options,
-        trust_env=True
+        trust_env=True,
     ) as session:
 
         workers = [
@@ -208,13 +241,14 @@ async def download_from_asyncgen(
                     root=root,
                     overwrite=overwrite,
                     is_valid_file=is_valid_file,
-                    proxy=proxy
+                    proxy=proxy,
+                    random_subsets=random_subsets,
                 )
             )
             for _ in range(nb_workers)
         ]
 
-        progressbar = tqdm(smoothing=0, unit=' Files', disable=verbose)
+        progressbar = tqdm(smoothing=0, unit=" Files", disable=verbose)
         # get chunks from async generator
         async with aiostream.stream.chunks(items, batch_size).stream() as chnk:
             async for batch in chnk:
@@ -237,7 +271,8 @@ def download(
     verbose: bool = False,
     overwrite: bool = False,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
-    proxy: Optional[str] = None
+    proxy: Optional[str] = None,
+    random_subsets: Optional[Dict] = None,
 ):
     """Core download function that takes an interable (sync or async)
 
@@ -246,7 +281,7 @@ def download(
             (async/sync) generator or list that yiels a standardized dict of urls
         root (str, optional):
             Root path of downloads. Defaults to "data".
-        tcp_connections (int, optional): 
+        tcp_connections (int, optional):
             Maximum number of concurrent TCP connections. Defaults to 128.
         nb_workers (int, optional):
             Maximum number of workers. Defaults to 128.
@@ -254,7 +289,7 @@ def download(
             Maximum queue batch size. Defaults to 8.
         retries (int, optional):
             Maximum number of retries. Defaults to 3.
-        verbose (bool, optional): 
+        verbose (bool, optional):
             Activate verbose. Defaults to False.
         overwrite (bool):
             overwrite files with existing `baseline` signature, Defaults to False.
@@ -267,6 +302,11 @@ def download(
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
+        random_subsets (Dict):
+            add random subset given as a dict of class names and it's propability.
+            e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items
+            go into a `train` subfolder and 10% into a `test` subfolder.
+            The propabilities have to sum up to `1.0` to avoid an error.
 
     Raises:
         NotImplementedError: If generator turns out to be invalid.
@@ -278,9 +318,13 @@ def download(
         if inspect.isgenerator(items) or isinstance(items, Iterable):
             items = aiostream.stream.iterate(items)
         else:
-            raise NotImplementedError(
-                "Provided iteratable could not be converted"
-            )
+            raise NotImplementedError("Provided iteratable could not be converted")
+
+    if random_subsets is not None:
+        p = random_subsets.values()
+        if sum(p) != 1.0:
+            raise RuntimeError("Make sure that weight probabilities add up to one")
+
     return run_async(
         download_from_asyncgen,
         items,
@@ -292,5 +336,6 @@ def download(
         verbose=verbose,
         overwrite=overwrite,
         is_valid_file=is_valid_file,
-        proxy=proxy
+        proxy=proxy,
+        random_subsets=random_subsets,
     )
