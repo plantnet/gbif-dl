@@ -43,3 +43,8 @@ def test_nb_samples_substreams(queries, key="speciesKey"):
         split_streams_by=key,
     )
     assert len(list(data_generator)) == len(queries[key])
+
+
+def test_gbif_query_count(queries):
+    count = gbif_dl.api.gbif_count(**queries)
+    assert count > 0
