@@ -1,5 +1,4 @@
 import pytest
-from gbif_dl.dataloaders import tensorflow as tfloader
 
 
 @pytest.fixture
@@ -26,6 +25,8 @@ def test_urls(request):
 
 @pytest.mark.skip(reason="no way of currently testing this")
 def test_torchdataset(train_urls, test_urls):
+    from gbif_dl.dataloaders import tensorflow as tfloader
+
     """Currently failes because some async stuff"""
     train_dataset = tfloader.create_dataset_from_generator(root="train", generator=train_urls)
     test_dataset = tfloader.create_dataset_from_generator(root="test", generator=test_urls)
