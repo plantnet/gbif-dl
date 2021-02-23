@@ -35,13 +35,11 @@ def test_nb_samples(queries, nb_samples):
         assert len(list(data_generator)) == nb_samples
 
 
-def test_nb_samples_substreams(queries, nb_samples):
+def test_nb_samples_substreams(queries, key="speciesKey"):
     data_generator = gbif_dl.api.generate_urls(
         queries=queries,
-        nb_samples=nb_samples,
-        split_streams_by="speciesKey",
+        nb_samples=None,
+        nb_samples_per_stream=1,
+        split_streams_by=key,
     )
-    if nb_samples is None:
-        assert next(data_generator)
-    elif nb_samples > 0:
-        assert len(list(data_generator)) == nb_samples
+    assert len(list(data_generator)) == len(queries[key])
