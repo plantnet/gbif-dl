@@ -9,24 +9,20 @@
 this package makes it simpler to obtain media data from the GBIF database to be used for training __machine learning classification__ tasks. It wraps the [GBIF API](https://www.gbif.org/developer/summary) and supports directly querying the api to obtain and download a list of urls.
 Existing saved queries can also be obtained using the download api of GBIF simply by providing GBIF DOI key.
 The package provides an efficient downloader that uses python asyncio modules to speed up downloading of many small files as typically occur in downloads.
-Ultimately `gbif-dl` can also directly return [pytorch]() or [tensorflow]() data loaders.
 
 ## Installation
 
 Installation can be done via pip.
-`
+
+```
 pip install gbif-dl
-`
-
-If pytorch or tensorflow dataset shall be returned, additional dependencies can be installed e.g. using `pip install gbif-dl['pytorch']`.
-
+```
 ## Usage
 
-The usage of `gbif-dl` helps users to create their own GBIF based media pipeline for training machine learning models. The package provides three core functionalities as followed:
+The usage of `gbif-dl` helps users to create their own GBIF based media pipeline for training machine learning models. The package provides two core functionalities as followed:
 
 1. `gbif-dl.generators`: Generators provide image urls from the GBIF database given queries or a pre-defined URL.
 2. `gbif-dl.io`: Provides efficient media downloading to write the data to a storage device.
-3. `gbif-dl.dataloaders`: Provide simple dataloaders for `PyTorch` and `Tensorflow` to access the downloaded data.
 
 ### 1. Retrieve media urls from GBIF
 
@@ -153,18 +149,30 @@ gbif_dl.io.download(data_generator, root="my_dataset")
 
 The downloader provides very fast download speeds by using an async queue. Some fail-safe functionality is provided by setting the number of `retries`, default to 3.
 
-### Training Datasets/Dataloaders
+### Training Datasets
 
 #### PyTorch
 
-`gbif-dl` makes it simple to train a PyTorch image classification model by providing a standard `torch.dataset`. Users can directly pass a query or dwca generator to the dataset and enable downloading, to simplify the code. 
+`gbif-dl` makes it simple to train a PyTorch image classification model by using e.g. `torchvision.ImageFolder`. Each item in the `data_generator` can be randomly assigned to a `train` or `test` subset using `random_subsets`. That way users can directly use the subsets.
 
 ```python
-from gbif_dl.dataloaders.torch import GBIFImageDataset
-dataset = GBIFImageDataset(root='my_dataset', generator=data_generator, download=True)
+import torchvision
+gbif_dl.io.download(data_generator, root="my_dataset", random_subsets={'train': 0.9, 'test': 0.1})
+train_dataset = torchvision.datasets.ImageFolder(root='my_dataset/train', ...)
+test_dataset = torchvision.datasets.ImageFolder(root='my_dataset/test', ...)
 ```
 
-> ⚠️ Note that we do not provide train/validation/test splits of the dataset as this would be more useful to design specifically to the downstream task.
+#### Tensorflow
+
+The simpliest way to generate a `tf.data.Dataset` pipeline from a data generator is to use `tf.keras.preprocessing.image_dataset_from_directory`.
+Similarily to the pytorch example, users just need to provide the root paths of the downloaded datasets.
+
+```python
+import tensorflow as tf
+gbif_dl.io.download(data_generator, root="my_dataset", random_subsets={'train': 0.9, 'test': 0.1})
+tf.keras.preprocessing.image_dataset_from_directory(root='my_dataset/train', label_mode="categorical", labels="inferred", *args, **kwargs)
+tf.keras.preprocessing.image_dataset_from_directory(root='my_dataset/test', label_mode="categorical", labels="inferred", *args, **kwargs)
+```
 
 ## FAQ
 
