@@ -2,9 +2,6 @@
 
 [![Build Status](https://github.com/plantnet/gbif-dl/workflows/CI/badge.svg)](https://github.com/plantnet/gbif-dl/actions?query=workflow%3ACI+branch%3Amaster+event%3Apush)
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/gbif-dl.svg)](https://pypi.python.org/pypi/gbif-dl)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3269749.svg)](https://doi.org/10.5281/zenodo.3269749)
-[![Docker hub](https://img.shields.io/docker/cloud/build/plantnet/gbif-dl)](https://cloud.docker.com/u/plantnet/repository/docker/plantnet/gbif-dl)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)]() 
 
 this package makes it simpler to obtain media data from the GBIF database to be used for training __machine learning classification__ tasks. It wraps the [GBIF API](https://www.gbif.org/developer/summary) and supports directly querying the api to obtain and download a list of urls.
 Existing saved queries can also be obtained using the download api of GBIF simply by providing GBIF DOI key.
