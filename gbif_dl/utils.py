@@ -1,3 +1,6 @@
+"""
+Utility functions
+"""
 import asyncio
 import functools
 import threading

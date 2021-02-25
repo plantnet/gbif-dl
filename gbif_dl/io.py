@@ -1,7 +1,10 @@
+"""
+Async based fast downloader.
+"""
 import asyncio
 import inspect
 from pathlib import Path
-from typing import AsyncGenerator, Callable, Dict, Generator, Union, Optional
+from typing import AsyncGenerator, Callable, Generator, Union, Optional
 import sys
 import json
 import hashlib
@@ -40,7 +43,7 @@ async def download_single(
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     overwrite: bool = False,
     proxy: Optional[str] = None,
-    random_subsets: Optional[Dict] = None,
+    random_subsets: Optional[dict[str, float]] = None,
 ):
     """Async function to download single url to disk
 
@@ -51,16 +54,13 @@ async def download_single(
         is_valid_file (optional): A function that takes bytes
             and checks if the bytes originate from a valid file
             (used to check of corrupt files). Defaults to None.
-        overwrite (bool):
-            overwrite files with existing `baseline` signature, Defaults to False.
-        proxy (str):
-            proxy server url. Authentication credentials can be passed in URL.
+        overwrite (bool): overwrite files with existing `baseline` signature, Defaults to False.
+        proxy (str): proxy server url. Authentication credentials can be passed in URL.
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
-        random_subsets (Dict):
-            add random splits/subsets given as a dict of class names and it's propability.
-            e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items
+        random_subsets (dict[str, float]): add random splits/subsets given as a dict of class names
+            and it's propability. e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items
             go into a `train` subfolder and 10% go into a `test` subfolder.
             The propabilities have to sum up to `1.0` to avoid an error.
     """
@@ -132,14 +132,14 @@ async def download_single(
             await fp.write(json.dumps(label))
 
 
-async def download_queue(
+async def _download_queue(
     queue: asyncio.Queue,
     session: RetryClient,
     root: str,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     overwrite: bool = False,
     proxy: Optional[str] = None,
-    random_subsets: Optional[Dict] = None,
+    random_subsets: Optional[dict[str, float]] = None,
 ):
     """Consumes items from download queue
 
@@ -150,15 +150,12 @@ async def download_queue(
         is_valid_file (optional): A function that takes bytes
             and checks if the bytes originate from a valid file
             (used to check of corrupt files). Defaults to None.
-        overwrite (bool):
-            overwrite files with existing `baseline` signature, Defaults to False.
-        proxy (str):
-            proxy server url. Authentication credentials can be passed in URL.
+        overwrite (bool): overwrite files with existing `baseline` signature, Defaults to False.
+        proxy (str): proxy server url. Authentication credentials can be passed in URL.
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
-        random_subsets (Dict):
-            add random subset given as a dict of class names and it's propability.
+        random_subsets (dict[str, float]): add random subset given as a dict of class names and it's propability.
             e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items
             go into a `train` subfolder and 10% go into a `test` subfolder.
             The propabilities have to sum up to `1.0` to avoid an error.
@@ -172,7 +169,7 @@ async def download_queue(
         queue.task_done()
 
 
-async def download_from_asyncgen(
+async def _download_from_asyncgen(
     items: AsyncGenerator,
     root: str = "data",
     tcp_connections: int = 64,
@@ -183,38 +180,28 @@ async def download_from_asyncgen(
     overwrite: bool = False,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     proxy: Optional[str] = None,
-    random_subsets: Optional[Dict] = None,
+    random_subsets: Optional[dict[str, float]] = None,
 ):
     """Asynchronous downloader that takes an interable and downloads it
 
     Args:
-        items (Union[Generator, AsyncGenerator]):
-            (async/sync) generator that yiels a standardized dict of urls
-        root (str, optional):
-            Root path of downloads. Defaults to "data".
-        tcp_connections (int, optional):
-            Maximum number of concurrent TCP connections. Defaults to 128.
-        nb_workers (int, optional):
-            Maximum number of workers. Defaults to 128.
-        batch_size (int, optional):
-            Maximum queue batch size. Defaults to 8.
-        retries (int, optional):
-            Maximum number of retries. Defaults to 3.
-        verbose (bool, if isinstance(e, Iterable):ptional):
-            Activate verbose. Defaults to False.
-        overwrite (bool):
-            overwrite files with existing `baseline` signature, Defaults to False.
+        items (Union[Generator, AsyncGenerator]): (async/sync) generator that yiels a standardized dict of urls
+        root (str, optional): Root path of downloads. Defaults to "data".
+        tcp_connections (int, optional): Maximum number of concurrent TCP connections. Defaults to 128.
+        nb_workers (int, optional): Maximum number of workers. Defaults to 128.
+        batch_size (int, optional): Maximum queue batch size. Defaults to 8.
+        retries (int, optional): Maximum number of retries. Defaults to 3.
+        verbose (bool, Optional): Activate verbose. Defaults to False.
+        overwrite (bool): overwrite files with existing `baseline` signature, Defaults to False.
         is_valid_file (optional): A function that takes bytes
             and checks if the bytes originate from a valid file
             (used to check of corrupt files). Defaults to None.
             overwrite existing files, Defaults to False.
-        proxy (str):
-            proxy server url. Authentication credentials can be passed in URL.
+        proxy (str): proxy server url. Authentication credentials can be passed in URL.
             e.g `proxy="http://user:pass@some.proxy.com"`.
             Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
-        random_subsets (Dict):
-            add random subset given as a dict of class names and it's propability.
+        random_subsets (dict[str, float]): add random subset given as a dict of class names and it's propability.
             e.g. `{'train': 0.9, 'test': 0.1}` will result in 90% of the items
             go into a `train` subfolder and 10% go into a `test` subfolder.
             The propabilities have to sum up to `1.0` to avoid an error.
@@ -236,7 +223,7 @@ async def download_from_asyncgen(
         loop = asyncio.get_event_loop()
         workers = [
             loop.create_task(
-                download_queue(
+                _download_queue(
                     queue,
                     session,
                     root=root,
@@ -273,38 +260,28 @@ def download(
     overwrite: bool = False,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     proxy: Optional[str] = None,
-    random_subsets: Optional[Dict] = None,
+    random_subsets: Optional[dict[str, float]] = None,
 ):
     """Core download function that takes an interable (sync or async)
 
     Args:
-        items (Union[Generator, AsyncGenerator, Iterable]):
-            (async/sync) generator or list that yiels a standardized dict of urls
-        root (str, optional):
-            Root path of downloads. Defaults to "data".
-        tcp_connections (int, optional):
-            Maximum number of concurrent TCP connections. Defaults to 128.
-        nb_workers (int, optional):
-            Maximum number of workers. Defaults to 128.
-        batch_size (int, optional):
-            Maximum queue batch size. Defaults to 8.
-        retries (int, optional):
-            Maximum number of retries. Defaults to 3.
-        verbose (bool, optional):
-            Activate verbose. Defaults to False.
-        overwrite (bool):
-            overwrite files with existing `baseline` signature, Defaults to False.
+        items (Union[Generator, AsyncGenerator, Iterable]): (async/sync) generator
+            or list that yiels a standardized dict of urls
+        root (str, optional): Root path of downloads. Defaults to "data".
+        tcp_connections (int, optional): Maximum number of concurrent TCP connections. Defaults to 128.
+        nb_workers (int, optional): Maximum number of workers. Defaults to 128.
+        batch_size (int, optional): Maximum queue batch size. Defaults to 8.
+        retries (int, optional): Maximum number of retries. Defaults to 3.
+        verbose (bool, optional): Activate verbose. Defaults to False.
+        overwrite (bool): overwrite files with existing `baseline` signature, Defaults to False.
         is_valid_file (optional): A function that takes bytes
             and checks if the bytes originate from a valid file
             (used to check of corrupt files). Defaults to None.
             overwrite existing files, Defaults to False.
-        proxy (str):
-            proxy server url. Authentication credentials can be passed in URL.
-            e.g `proxy="http://user:pass@some.proxy.com"`.
-            Proxy can also be used globally using environmental variables.
+        proxy (str): Proxy server url. Authentication credentials can be passed in URL. e.g
+            `proxy="http://user:pass@some.proxy.com"`. Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
-        random_subsets (Dict):
-            add random subset given as a dict of class names and it's propability.
+        random_subsets (dict[str, float]): add random subset given as a dict of class names and it's propability.
             e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items
             go into a `train` subfolder and 10% into a `test` subfolder.
             The propabilities have to sum up to `1.0` to avoid an error.
@@ -327,7 +304,7 @@ def download(
             raise RuntimeError("Make sure that weight probabilities add up to one")
 
     return run_async(
-        download_from_asyncgen,
+        _download_from_asyncgen,
         items,
         root=root,
         tcp_connections=tcp_connections,
