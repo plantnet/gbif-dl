@@ -28,7 +28,7 @@ setup(
         "tqdm",
         "typing-extensions; python_version < '3.8'",
     ],
-    extras_require={"tests": ["pytest"]},
+    extras_require={"tests": ["pytest"], "docs": ["pdoc3"]},
     # entry_points={"console_scripts": ["gbif_dl=gbif_dl.cli:download"]},
     packages=find_packages(),
     include_package_data=True,
