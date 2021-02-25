@@ -13,8 +13,8 @@ def nb_samples(request):
 
 
 def test_is_doi(doi):
-    assert gbif_dl.dwca._is_doi(doi) is True
-    assert gbif_dl.dwca._is_doi("xyz") is False
+    assert gbif_dl.dwca.is_doi(doi) is True
+    assert gbif_dl.dwca.is_doi("xyz") is False
 
 
 def test_doi_to_gbif_key(doi):

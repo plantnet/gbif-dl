@@ -1,12 +1,16 @@
+"""
+This module creates the interface to the GBIF API via a [download/doi functionality](https://www.gbif.org/data-processing).
+Give a link to a GBIF darwincore archive, users can use this module to obtain lists of urls of media data 
+to be downloaded using the [io](gbif_dl.io) module.
+"""
+
 import pygbif
 from pathlib import Path
 import random
 import requests
 import hashlib
-import mimetypes
 import re
 import tempfile
-import shutil
 from typing import Optional
 import os
 
@@ -87,7 +91,7 @@ def doi_to_gbif_key(doi: str) -> str:
                 return gbif_key
 
 
-def _is_doi(identifier: str) -> bool:
+def is_doi(identifier: str) -> bool:
     """Validates if identifier is a valid DOI
 
     Args:
@@ -133,7 +137,7 @@ def generate_urls(
     Returns:
         Iterable: item generator that yields files from generator
     """
-    if _is_doi:
+    if is_doi:
         key = doi_to_gbif_key(identifier)
     else:
         key = identifier

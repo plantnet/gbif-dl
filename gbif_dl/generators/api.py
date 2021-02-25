@@ -1,3 +1,8 @@
+"""
+This module creates the interface to the GBIF API. By providing queries to the api, users can use 
+this module to obtain lists of urls of media data to be downloaded using the [io](gbif_dl.io) module.
+"""
+
 import pygbif
 import itertools as it
 import random
@@ -29,11 +34,8 @@ def gbif_query_generator(
         label (str, optional): Output label name. Defaults to `None`.
         subset (str, optional): Subset name. Defaults to `None`.
 
-    Returns:
-        str: [description]
-
     Yields:
-        Iterator[str]: [description]
+        MediaData
     """
     offset = 0
 
@@ -84,7 +86,7 @@ def gbif_count(mediatype: str = "StillImage", *args, **kwargs) -> str:
     return pygbif.occurrences.search(limit=0, mediatype=mediatype, *args, **kwargs)["count"]
 
 
-def dproduct(dicts):
+def _dproduct(dicts):
     """Returns the products of dicts"""
     return (dict(zip(dicts, x)) for x in it.product(*dicts.values()))
 
@@ -104,38 +106,32 @@ def generate_urls(
     """Provides url generator from given query
 
     Args:
-        queries (Dict):
-            dictionary of queries supported by the GBIF api
+        queries (Dict): dictionary of queries supported by the GBIF api
         label (str, optional): Output label name.
             Defaults to `None` which yields all metadata.
-        nb_samples (int):
-            Limit the total number of samples retrieved from the API.
+        nb_samples (int): Limit the total number of samples retrieved from the API.
             When set to -1 and `split_streams_by` is not `None`,
             a minimum number of samples will be calculated
             from using the number of available samples per stream.
             Defaults to `None` which retrieves all samples from all streams until
             all streams are exchausted.
-        nb_samples_per_stream (int):
-            Limit the maximum number of items to be retrieved per stream.
+        nb_samples_per_stream (int): Limit the maximum number of items to be retrieved per stream.
             Defaults to `None` which retrieves all samples from stream until
             stream generator is exhausted.
-        split_streams_by (Optional[Union[str, List]], optional):
-            Stream identifiers to be balanced. Defaults to None.
-        subset_streams (Optional[Union[str, Dict]], optional):
-            Map certain streams into separate subsets, by setting the `subset`
-            metadata. Supports a remainder value of `"*"` which acts as a
-            wildcard. E.g. `subset_streams={"train": { "speciesKey": [5352251, 3190653]},
+        split_streams_by (Optional[Union[str, List]], optional): Stream identifiers to be balanced.
+            Defaults to None.
+        subset_streams (Optional[Union[str, Dict]], optional): Map certain streams into
+            separate subsets, by setting the `subset` metadata. Supports a remainder
+            value of `"*"` which acts as a wildcard. Defaults to None.
+            E.g. `subset_streams={"train": { "speciesKey": [5352251, 3190653]},
             "test": { "speciesKey": "*" }}` will move species of 5352251 and 3190653
             into `train` whereas all other species will go into test.
-            Defaults to None.
-        weighted_streams (int):
-            Calculates sampling weights for all streams and applies them during
+        weighted_streams (int): Calculates sampling weights for all streams and applies them during
             sampling. To be combined with nb_samples not `None`.
             Defaults to `False`.
         cache_requests (bool, optional): Enable GBIF API cache.
             Can significantly improve API requests. Defaults to False.
-        mediatype (str):
-            supported GBIF media type. Can be `StillImage`, `MovingImage`, `Sound`.
+        mediatype (str): supported GBIF media type. Can be `StillImage`, `MovingImage`, `Sound`.
             Defaults to `StillImage`.
 
     Returns:
@@ -164,7 +160,7 @@ def generate_urls(
 
         # for each b in balance_queries, create a separate stream
         # later we control the sampling processs of these streams to balance them
-        for b in dproduct(balance_queries):
+        for b in _dproduct(balance_queries):
             subset = None
             # for each stream we wrap into pescador Streamers for additional features
             for key, value in b.items():
@@ -202,7 +198,7 @@ def generate_urls(
 
         if verbose:
             nb_queries = [
-                gbif_count(mediatype=mediatype, **q, **b) for b in dproduct(balance_queries)
+                gbif_count(mediatype=mediatype, **q, **b) for b in _dproduct(balance_queries)
             ]
             print(sum(nb_queries))
 
@@ -211,14 +207,14 @@ def generate_urls(
         if nb_samples == -1:
             # calculate the miniumum number of samples available per stream
             nb_samples = min(
-                [gbif_count(mediatype=mediatype, **q, **b) for b in dproduct(balance_queries)]
+                [gbif_count(mediatype=mediatype, **q, **b) for b in _dproduct(balance_queries)]
             ) * len(streams)
 
         if weighted_streams:
             weights = np.array(
                 [
                     float(gbif_count(mediatype=mediatype, **q, **b))
-                    for b in dproduct(balance_queries)
+                    for b in _dproduct(balance_queries)
                 ]
             )
             weights /= np.max(weights)

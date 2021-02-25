@@ -1,0 +1,26 @@
+name: Docs
+
+on:
+  push:
+    branches:
+      - master
+jobs:
+  test:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install dependencies
+        run: |
+            pip install -e .['docs']
+            pip install ghp-import
+      - name: deploy docs
+        run: |
+          echo '<meta http-equiv=refresh content=0;url=polars/index.html>' > target/doc/index.html && \
+          pdoc --html gbif_dl --output-dir target/doc --template-dir pdoc --force && \
+          ghp-import -n target/doc && \
+          git push -qf https://${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git gh-pages
