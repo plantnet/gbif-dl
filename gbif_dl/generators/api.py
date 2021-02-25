@@ -198,7 +198,7 @@ def generate_urls(
 
         if verbose:
             nb_queries = [
-                gbif_count(mediatype=mediatype, **q, **b) for b in dproduct(balance_queries)
+                gbif_count(mediatype=mediatype, **q, **b) for b in _dproduct(balance_queries)
             ]
             print(sum(nb_queries))
 
@@ -207,14 +207,14 @@ def generate_urls(
         if nb_samples == -1:
             # calculate the miniumum number of samples available per stream
             nb_samples = min(
-                [gbif_count(mediatype=mediatype, **q, **b) for b in dproduct(balance_queries)]
+                [gbif_count(mediatype=mediatype, **q, **b) for b in _dproduct(balance_queries)]
             ) * len(streams)
 
         if weighted_streams:
             weights = np.array(
                 [
                     float(gbif_count(mediatype=mediatype, **q, **b))
-                    for b in dproduct(balance_queries)
+                    for b in _dproduct(balance_queries)
                 ]
             )
             weights /= np.max(weights)
