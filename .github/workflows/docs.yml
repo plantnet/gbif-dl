@@ -21,7 +21,7 @@ jobs:
       - name: deploy docs
         run: |
           mkdir docs
-          echo '<meta http-equiv=refresh content=0;url=polars/index.html>' > docs/index.html && \
+          echo '<meta http-equiv=refresh content=0;url=gbif_dl/index.html>' > docs/index.html && \
           pdoc --html gbif_dl --output-dir docs --template-dir pdoc --force && \
           ghp-import -n docs && \
           git push -qf https://${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git gh-pages
