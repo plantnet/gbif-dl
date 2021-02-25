@@ -2,7 +2,7 @@
 
 [![Build Status](https://github.com/plantnet/gbif-dl/workflows/CI/badge.svg)](https://github.com/plantnet/gbif-dl/actions?query=workflow%3ACI+branch%3Amaster+event%3Apush)
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/gbif-dl.svg)](https://pypi.python.org/pypi/gbif-dl)
-[![Documentation Status](https://img.shields.io/badge/docs-blue)](https://plantnet.github.io/gbif_dl/)
+[![Documentation Status](https://img.shields.io/badge/docs-api-blue)](https://plantnet.github.io/gbif-dl/)
 
 
 this package makes it simpler to obtain media data from the GBIF database to be used for training __machine learning classification__ tasks. It wraps the [GBIF API](https://www.gbif.org/developer/summary) and supports directly querying the api to obtain and download a list of urls.
