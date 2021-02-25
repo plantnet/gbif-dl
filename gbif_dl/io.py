@@ -43,7 +43,7 @@ async def download_single(
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     overwrite: bool = False,
     proxy: Optional[str] = None,
-    random_subsets: Optional[dict[str, float]] = None,
+    random_subsets: Optional[dict] = None,
 ):
     """Async function to download single url to disk
 
@@ -139,7 +139,7 @@ async def _download_queue(
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     overwrite: bool = False,
     proxy: Optional[str] = None,
-    random_subsets: Optional[dict[str, float]] = None,
+    random_subsets: Optional[dict] = None,
 ):
     """Consumes items from download queue
 
@@ -180,7 +180,7 @@ async def _download_from_asyncgen(
     overwrite: bool = False,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     proxy: Optional[str] = None,
-    random_subsets: Optional[dict[str, float]] = None,
+    random_subsets: Optional[dict] = None,
 ):
     """Asynchronous downloader that takes an interable and downloads it
 
@@ -260,7 +260,7 @@ def download(
     overwrite: bool = False,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     proxy: Optional[str] = None,
-    random_subsets: Optional[dict[str, float]] = None,
+    random_subsets: Optional[dict] = None,
 ):
     """Core download function that takes an interable (sync or async)
 
