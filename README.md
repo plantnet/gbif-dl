@@ -169,8 +169,8 @@ Similarily to the pytorch example, users just need to provide the root paths of 
 ```python
 import tensorflow as tf
 gbif_dl.io.download(data_generator, root="my_dataset", random_subsets={'train': 0.9, 'test': 0.1})
-tf.keras.preprocessing.image_dataset_from_directory(root='my_dataset/train', label_mode="categorical", labels="inferred", *args, **kwargs)
-tf.keras.preprocessing.image_dataset_from_directory(root='my_dataset/test', label_mode="categorical", labels="inferred", *args, **kwargs)
+train_dataset = tf.keras.preprocessing.image_dataset_from_directory(root='my_dataset/train', label_mode="categorical", labels="inferred", *args, **kwargs)
+test_dataset = tf.keras.preprocessing.image_dataset_from_directory(root='my_dataset/test', label_mode="categorical", labels="inferred", *args, **kwargs)
 ```
 
 ## FAQ
