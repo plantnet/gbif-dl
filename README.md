@@ -10,7 +10,7 @@ Existing saved queries can also be obtained using the download api of GBIF simpl
 The package provides an efficient downloader that uses python asyncio modules to speed up downloading of many small files as typically occur in downloads.
 
 ## Disclaimer
-Contrary to GBIF occurrences that have all a creative common license (CC0, CC BY, or CC BY-NC), GBIF doesn’t give any official recommendation to set a license on the shared multimedia files. The Licenses fields are essentially free text filled by the data provider. Data providers are strongly encourage to set up their licenses in a machine readable format, but there is no guarranty. Thus, it is the responsability of GBIF-DL users to set up the appropriate filters on the license field and respect the terms of use of that licenses. 
+Unlike GBIF occurrences that all have a creative common license (CC0, CC BY, or CC BY-NC), GBIF does not give any official recommendation for licensing shared media files. The License fields are essentially free text filled in by the data provider. Data providers are strongly encouraged to set their licenses in a machine-readable format, but there is no guarantee. Thus, it is the responsibility of GBIF-DL users to set up the appropriate filters on the license field and to respect the conditions of use of these licenses.
 
 ## Installation
 
