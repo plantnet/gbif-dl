@@ -36,33 +36,21 @@ class MediaData(TypedDict):
     subset: Optional[str]
 
 
-async def download_single(
-    item: MediaData,
-    session: RetryClient,
-    root: str = "downloads",
-    is_valid_file: Optional[Callable[[bytes], bool]] = None,
-    overwrite: bool = False,
-    proxy: Optional[str] = None,
-    random_subsets: Optional[dict] = None,
-):
+class DownloadParams(TypedDict):
+    root: str
+    overwrite: bool
+    is_valid_file: Optional[Callable[[bytes], bool]]
+    proxy: Optional[str]
+    random_subsets: Optional[dict]
+
+
+async def download_single(item: MediaData, session: RetryClient, params: DownloadParams):
     """Async function to download single url to disk
 
     Args:
         item (Dict): item details, including url and filename
         session (RetryClient): aiohttp session
-        root (str, optional): Root path of download. Defaults to "downloads".
-        is_valid_file (optional): A function that takes bytes
-            and checks if the bytes originate from a valid file
-            (used to check of corrupt files). Defaults to None.
-        overwrite (bool): overwrite files with existing `baseline` signature, Defaults to False.
-        proxy (str): proxy server url. Authentication credentials can be passed in URL.
-            e.g `proxy="http://user:pass@some.proxy.com"`.
-            Proxy can also be used globally using environmental variables.
-            See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
-        random_subsets (dict[str, float]): add random splits/subsets given as a dict of class names
-            and it's propability. e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items
-            go into a `train` subfolder and 10% go into a `test` subfolder.
-            The propabilities have to sum up to `1.0` to avoid an error.
+        params (DownloadParams): Download parameter dict
     """
     if isinstance(item, dict):
         url = item.get("url")
@@ -73,12 +61,12 @@ async def download_single(
         url = item
         label, basename, subset = None, None, None
 
-    if subset is None and random_subsets is not None:
-        subset_choices = list(random_subsets.keys())
-        p = list(random_subsets.values())
+    if subset is None and params["random_subsets"] is not None:
+        subset_choices = list(params["random_subsets"].keys())
+        p = list(params["random_subsets"].values())
         subset = random.choices(subset_choices, weights=p, k=1)[0]
 
-    label_path = Path(root)
+    label_path = Path(params["root"])
 
     if subset is not None:
         label_path /= Path(subset)
@@ -95,11 +83,11 @@ async def download_single(
         basename = hashlib.sha1(url.encode("utf-8")).hexdigest()
 
     check_files_with_same_basename = label_path.glob(basename + "*")
-    if list(check_files_with_same_basename) and not overwrite:
+    if list(check_files_with_same_basename) and not params["overwrite"]:
         # do not overwrite, skips based on base path
         return
 
-    async with session.get(url, proxy=proxy) as res:
+    async with session.get(url, proxy=params["params"]) as res:
         content = await res.read()
 
     # guess mimetype and suffix from content
@@ -116,8 +104,8 @@ async def download_single(
         print(f"Download failed: {res.status}")
         return
 
-    if is_valid_file is not None:
-        if not is_valid_file(content):
+    if params["is_valid_file"] is not None:
+        if not params["is_valid_file"](content):
             print(f"File check failed")
             return
 
@@ -132,79 +120,40 @@ async def download_single(
             await fp.write(json.dumps(label))
 
 
-async def _download_queue(
-    queue: asyncio.Queue,
-    session: RetryClient,
-    root: str,
-    is_valid_file: Optional[Callable[[bytes], bool]] = None,
-    overwrite: bool = False,
-    proxy: Optional[str] = None,
-    random_subsets: Optional[dict] = None,
-):
+async def _download_queue(queue: asyncio.Queue, session: RetryClient, params: DownloadParams):
     """Consumes items from download queue
 
     Args:
         queue (asyncio.Queue): Queue of items
         session (RetryClient): RetryClient aiohttp session object
-        root (str, optional): root path.
-        is_valid_file (optional): A function that takes bytes
-            and checks if the bytes originate from a valid file
-            (used to check of corrupt files). Defaults to None.
-        overwrite (bool): overwrite files with existing `baseline` signature, Defaults to False.
-        proxy (str): proxy server url. Authentication credentials can be passed in URL.
-            e.g `proxy="http://user:pass@some.proxy.com"`.
-            Proxy can also be used globally using environmental variables.
-            See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
-        random_subsets (dict[str, float]): add random subset given as a dict of class names and it's propability.
-            e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items
-            go into a `train` subfolder and 10% go into a `test` subfolder.
-            The propabilities have to sum up to `1.0` to avoid an error.
+        params (DownloadParams): Download parameter dict
     """
     while True:
         batch = await queue.get()
         for sample in batch:
-            await download_single(
-                sample, session, root, is_valid_file, overwrite, proxy, random_subsets
-            )
+            await download_single(sample, session, params)
         queue.task_done()
 
 
 async def _download_from_asyncgen(
     items: AsyncGenerator,
-    root: str = "data",
+    params: DownloadParams,
     tcp_connections: int = 64,
     nb_workers: int = 64,
     batch_size: int = 16,
     retries: int = 3,
     verbose: bool = False,
-    overwrite: bool = False,
-    is_valid_file: Optional[Callable[[bytes], bool]] = None,
-    proxy: Optional[str] = None,
-    random_subsets: Optional[dict] = None,
 ):
     """Asynchronous downloader that takes an interable and downloads it
 
     Args:
         items (Union[Generator, AsyncGenerator]): (async/sync) generator that yiels a standardized dict of urls
-        root (str, optional): Root path of downloads. Defaults to "data".
         tcp_connections (int, optional): Maximum number of concurrent TCP connections. Defaults to 128.
         nb_workers (int, optional): Maximum number of workers. Defaults to 128.
         batch_size (int, optional): Maximum queue batch size. Defaults to 8.
         retries (int, optional): Maximum number of retries. Defaults to 3.
         verbose (bool, Optional): Activate verbose. Defaults to False.
-        overwrite (bool): overwrite files with existing `baseline` signature, Defaults to False.
-        is_valid_file (optional): A function that takes bytes
-            and checks if the bytes originate from a valid file
-            (used to check of corrupt files). Defaults to None.
-            overwrite existing files, Defaults to False.
-        proxy (str): proxy server url. Authentication credentials can be passed in URL.
-            e.g `proxy="http://user:pass@some.proxy.com"`.
-            Proxy can also be used globally using environmental variables.
-            See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
-        random_subsets (dict[str, float]): add random subset given as a dict of class names and it's propability.
-            e.g. `{'train': 0.9, 'test': 0.1}` will result in 90% of the items
-            go into a `train` subfolder and 10% go into a `test` subfolder.
-            The propabilities have to sum up to `1.0` to avoid an error.
+        params (DownloadParams): DownloadParams
     Raises:
         NotImplementedError: If generator turns out to be invalid.
     """
@@ -222,17 +171,7 @@ async def _download_from_asyncgen(
 
         loop = asyncio.get_event_loop()
         workers = [
-            loop.create_task(
-                _download_queue(
-                    queue,
-                    session,
-                    root=root,
-                    overwrite=overwrite,
-                    is_valid_file=is_valid_file,
-                    proxy=proxy,
-                    random_subsets=random_subsets,
-                )
-            )
+            loop.create_task(_download_queue(queue, session, params=params))
             for _ in range(nb_workers)
         ]
 
@@ -303,17 +242,20 @@ def download(
         if sum(p) != 1.0:
             raise RuntimeError("Make sure that weight probabilities add up to one")
 
+    params = {
+        "root": root,
+        "overwrite": overwrite,
+        "is_valid_file": is_valid_file,
+        "proxy": proxy,
+        "random_subsets": random_subsets,
+    }
     return run_async(
         _download_from_asyncgen,
         items,
-        root=root,
         tcp_connections=tcp_connections,
         nb_workers=nb_workers,
         batch_size=batch_size,
         retries=retries,
         verbose=verbose,
-        overwrite=overwrite,
-        is_valid_file=is_valid_file,
-        proxy=proxy,
-        random_subsets=random_subsets,
+        params=params,
     )
