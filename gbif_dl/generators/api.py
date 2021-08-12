@@ -22,7 +22,7 @@ def gbif_query_generator(
     page_limit: int = 300,
     mediatype: str = "StillImage",
     license_info: bool = True,
-    one_image_per_occurrence: bool = True,
+    one_media_per_occurrence: bool = True,
     label: Optional[str] = None,
     subset: Optional[str] = None,
     *args,
@@ -34,7 +34,7 @@ def gbif_query_generator(
         page_limit (int, optional): GBIF api uses paging which can be modified. Defaults to 300.
         mediatype (str, optional): Sets GBIF mediatype. Defaults to 'StillImage'.
         license_info (bool, optional): Retrieve images license information. Default to True.
-        one_image_per_occurrence (bool, optional): Only pick one image per occurrence. Default to True.
+        one_media_per_occurrence (bool, optional): Only pick one image per occurrence. Default to True.
         label (str, optional): Output label name. Defaults to `None`.
         subset (str, optional): Subset name. Defaults to `None`.
 
@@ -59,8 +59,8 @@ def gbif_query_generator(
                 output_label = metadata
             if medias:
                 # multiple media can be attached
-                if one_image_per_occurrence:
-                    # select one random url if one_image_per_occurrence
+                if one_media_per_occurrence:
+                    # select one random url if one_media_per_occurrence
                     medias = [random.choice(medias)]
                 for media in medias:
                     # check if the identifier (url) is present
@@ -116,6 +116,7 @@ def generate_urls(
     cache_requests: bool = False,
     mediatype: str = "StillImage",
     license_info: bool = True,
+    one_media_per_occurrence: bool = True,
     verbose: bool = False,
 ):
     """Provides url generator from given query
@@ -149,6 +150,8 @@ def generate_urls(
         mediatype (str): supported GBIF media type. Can be `StillImage`, `MovingImage`, `Sound`.
             Defaults to `StillImage`.
         license_info (bool): retrieve images license information. Default to True.
+        one_media_per_occurrence (bool): only retrieve one media in multiple media occurrences. Default to True,
+
 
     Returns:
         Iterable: generate-like object, that yields dictionaries
@@ -204,6 +207,7 @@ def generate_urls(
                         mediatype=mediatype,
                         subset=subset,
                         license_info=license_info,
+                        one_media_per_occurrence=one_media_per_occurrence,
                         **q,
                         **b,
                     ),
@@ -253,5 +257,6 @@ def generate_urls(
             nb_samples = min(nb_samples, nb_samples_per_stream)
         print(nb_samples)
         return pescador.Streamer(
-            gbif_query_generator, label=label, mediatype=mediatype, license_info=license_info, **q
+            gbif_query_generator, label=label, mediatype=mediatype, license_info=license_info, 
+            one_media_per_occurrence=one_media_per_occurrence, **q
         ).iterate(max_iter=nb_samples)
