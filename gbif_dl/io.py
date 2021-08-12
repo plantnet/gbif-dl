@@ -34,6 +34,9 @@ class MediaData(TypedDict):
     basename: Optional[str]
     label: Optional[str]
     subset: Optional[str]
+    publisher: Optional[str]
+    license: Optional[str]
+    rightsHolder: Optional[str]
 
 
 async def download_single(
@@ -99,22 +102,26 @@ async def download_single(
         # do not overwrite, skips based on base path
         return
 
+    print("Downloading", url)
     async with session.get(url, proxy=proxy) as res:
         content = await res.read()
 
     # guess mimetype and suffix from content
     kind = filetype.guess(content)
     if kind is None:
-        print("Cannot guess file type!")
+        print("Cannot guess file type!", url)
         return
     else:
         suffix = "." + kind.extension
         mime = kind.mime
+        print("got a", mime)
 
     # Check everything went well
     if res.status != 200:
         print(f"Download failed: {res.status}")
         return
+    else:
+        print('Success', url)
 
     if is_valid_file is not None:
         if not is_valid_file(content):
