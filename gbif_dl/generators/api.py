@@ -21,6 +21,8 @@ log = logging.getLogger(__name__)
 def gbif_query_generator(
     page_limit: int = 300,
     mediatype: str = "StillImage",
+    license_info: bool = True,
+    one_image_per_occurrence: bool = True,
     label: Optional[str] = None,
     subset: Optional[str] = None,
     *args,
@@ -31,6 +33,8 @@ def gbif_query_generator(
     Args:
         page_limit (int, optional): GBIF api uses paging which can be modified. Defaults to 300.
         mediatype (str, optional): Sets GBIF mediatype. Defaults to 'StillImage'.
+        license_info (bool, optional): Retrieve images license information. Default to True.
+        one_image_per_occurrence (bool, optional): Only pick one image per occurrence. Default to True.
         label (str, optional): Output label name. Defaults to `None`.
         subset (str, optional): Subset name. Defaults to `None`.
 
@@ -45,27 +49,37 @@ def gbif_query_generator(
         )
 
         # Iterate over request pages. Can possibly also done async
-        for metadata in resp["results"]:
+        for metadata in resp.get("results",[]):
             # check if media key is present
-            if metadata["media"]:
+            medias = metadata.get("media", None)
+            # store the valid label
+            if label:
+                output_label = str(metadata.get(label, None))
+            else:
+                output_label = metadata
+            if medias:
                 # multiple media can be attached
-                # select random url
-                media = random.choice(metadata["media"])
+                if one_image_per_occurrence:
+                    # select one random url if one_image_per_occurrence
+                    medias = [random.choice(medias)]
+                for media in medias:
+                    # check if the identifier (url) is present
+                    url = media.get("identifier", None)
+                    if url:
+                        # hash the url, which later becomes the datatype
+                        hashed_url = hashlib.sha1(url.encode("utf-8")).hexdigest()
 
-                # hash the url, which later becomes the datatype
-                hashed_url = hashlib.sha1(media["identifier"].encode("utf-8")).hexdigest()
-
-                if label is not None:
-                    output_label = str(metadata.get(label))
-                else:
-                    output_label = metadata
-
-                yield {
-                    "url": media["identifier"],
-                    "basename": hashed_url,
-                    "label": output_label,
-                    "subset": subset,
-                }
+                        media_data = {
+                            "url":url,
+                            "basename":hashed_url,
+                            "label":output_label,
+                            "subset":subset
+                        }
+                        if license_info:
+                            media_data["publisher"] = media.get("publisher", None)
+                            media_data["license"] = media.get("license", None)
+                            media_data["rightsHolder"]= media.get("rightsHolder", media.get("creator", None))
+                        yield media_data
 
         if resp["endOfRecords"]:
             break
@@ -74,7 +88,7 @@ def gbif_query_generator(
 
 
 def gbif_count(mediatype: str = "StillImage", *args, **kwargs) -> str:
-    """Count the number of occurances from given query
+    """Count the number of occurrences from given query
 
     Args:
         mediatype (str, optional): [description]. Defaults to 'StillImage'.
@@ -101,6 +115,7 @@ def generate_urls(
     weighted_streams: bool = False,
     cache_requests: bool = False,
     mediatype: str = "StillImage",
+    license_info: bool = True,
     verbose: bool = False,
 ):
     """Provides url generator from given query
@@ -133,6 +148,7 @@ def generate_urls(
             Can significantly improve API requests. Defaults to False.
         mediatype (str): supported GBIF media type. Can be `StillImage`, `MovingImage`, `Sound`.
             Defaults to `StillImage`.
+        license_info (bool): retrieve images license information. Default to True.
 
     Returns:
         Iterable: generate-like object, that yields dictionaries
@@ -187,6 +203,7 @@ def generate_urls(
                         label=label,
                         mediatype=mediatype,
                         subset=subset,
+                        license_info=license_info,
                         **q,
                         **b,
                     ),
@@ -236,5 +253,5 @@ def generate_urls(
             nb_samples = min(nb_samples, nb_samples_per_stream)
         print(nb_samples)
         return pescador.Streamer(
-            gbif_query_generator, label=label, mediatype=mediatype, **q
+            gbif_query_generator, label=label, mediatype=mediatype, license_info=license_info, **q
         ).iterate(max_iter=nb_samples)
