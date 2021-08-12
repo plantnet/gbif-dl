@@ -49,7 +49,7 @@ def gbif_query_generator(
         )
 
         # Iterate over request pages. Can possibly also done async
-        for metadata in resp.get("results",[]):
+        for metadata in resp.get("results", []):
             # check if media key is present
             medias = metadata.get("media", None)
             # store the valid label
@@ -70,15 +70,17 @@ def gbif_query_generator(
                         hashed_url = hashlib.sha1(url.encode("utf-8")).hexdigest()
 
                         media_data = {
-                            "url":url,
-                            "basename":hashed_url,
-                            "label":output_label,
-                            "subset":subset
+                            "url": url,
+                            "basename": hashed_url,
+                            "label": output_label,
+                            "subset": subset,
                         }
                         if license_info:
                             media_data["publisher"] = media.get("publisher", None)
                             media_data["license"] = media.get("license", None)
-                            media_data["rightsHolder"]= media.get("rightsHolder", media.get("creator", None))
+                            media_data["rightsHolder"] = media.get(
+                                "rightsHolder", media.get("creator", None)
+                            )
                         yield media_data
 
         if resp["endOfRecords"]:
@@ -257,6 +259,10 @@ def generate_urls(
             nb_samples = min(nb_samples, nb_samples_per_stream)
         print(nb_samples)
         return pescador.Streamer(
-            gbif_query_generator, label=label, mediatype=mediatype, license_info=license_info, 
-            one_media_per_occurrence=one_media_per_occurrence, **q
+            gbif_query_generator,
+            label=label,
+            mediatype=mediatype,
+            license_info=license_info,
+            one_media_per_occurrence=one_media_per_occurrence,
+            **q,
         ).iterate(max_iter=nb_samples)

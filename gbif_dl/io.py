@@ -120,8 +120,6 @@ async def download_single(
     if res.status != 200:
         print(f"Download failed: {res.status}")
         return
-    else:
-        print('Success', url)
 
     if is_valid_file is not None:
         if not is_valid_file(content):
