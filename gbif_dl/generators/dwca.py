@@ -27,6 +27,8 @@ def dwca_generator(
     dwca_path: str,
     label: str = "speciesKey",
     mediatype: str = "StillImage",
+    license_info: bool = True,
+    one_media_per_occurrence: bool = True,
     delete: Optional[bool] = False,
 ) -> MediaData:
     """Yields media urls from GBIF Darwin Core Archive
@@ -35,6 +37,8 @@ def dwca_generator(
         dwca_path (str): path to darwin core zip file
         label (str, optional): Output label name. Defaults to "speciesKey".
         mediatype (str, optional): Media type. Defaults to 'StillImage'.
+        license_info (bool): retrieve images license information. Default to True.
+        one_media_per_occurrence (bool): only retrieve one media in multiple media occurrences. Default to True,
         delete (bool, optional): Delete darwin core archive when finished.
 
     Yields:
@@ -51,23 +55,36 @@ def dwca_generator(
                     if ext.data[mmqualname + "type"] == mediatype:
                         img_extensions.append(ext.data)
 
-            selected_img = random.choice(img_extensions)
-
-            url = selected_img[mmqualname + "identifier"]
-
-            # hash the url, which later becomes the datatype
-            hashed_url = hashlib.sha1(url.encode("utf-8")).hexdigest()
-
-            if label is not None:
-                output_label = str(row.data.get(gbifqualname + label))
+            if one_media_per_occurrence:
+                media = [random.choice(img_extensions)]
             else:
-                output_label = row.data
+                media = img_extensions
 
-            yield {
-                "url": url,
-                "basename": hashed_url,
-                "label": output_label,
-            }
+            for selected_img in media:
+                url = selected_img.get(mmqualname + "identifier", None)
+                if url:
+                    # hash the url, which later becomes the datatype
+                    hashed_url = hashlib.sha1(url.encode("utf-8")).hexdigest()
+
+                    if label is not None:
+                        output_label = str(row.data.get(gbifqualname + label))
+                    else:
+                        output_label = row.data
+
+                    media_data = {
+                        "url": url,
+                        "basename": hashed_url,
+                        "label": output_label,
+                    }
+                    if license_info:
+                        media_data["publisher"] = selected_img.get(mmqualname + "publisher", None)
+                        media_data["license"] = selected_img.get(mmqualname + "license", None)
+                        media_data["rightsHolder"] = selected_img.get(
+                            mmqualname + "rightsHolder",
+                            selected_img.get(mmqualname + "creator", None),
+                        )
+
+                    yield media_data
 
     if delete:
         os.remove(dwca_path)
@@ -119,6 +136,8 @@ def generate_urls(
     dwca_root_path=None,
     label: Optional[str] = None,
     mediatype: Optional[str] = "StillImage",
+    license_info: bool = True,
+    one_media_per_occurrence: bool = True,
     delete: Optional[bool] = False,
 ):
     """Generate GBIF items from DOI or GBIF download key
@@ -132,6 +151,9 @@ def generate_urls(
             Defaults to `None` which yields all metadata.
         mediatype (str, optional): Sets GBIF mediatype. Defaults to 'StillImage'.
             the creation of temporary directories.
+        license_info (bool): retrieve images license information. Default to True.
+        one_media_per_occurrence (bool): only retrieve one media in multiple media occurrences. Default to True,
+
         delete (bool, optional): Delete darwin core archive when finished.
 
     Returns:
@@ -154,4 +176,11 @@ def generate_urls(
         dwca_path = r["path"]
 
     # extract media urls and return item generator
-    return dwca_generator(dwca_path=dwca_path, label=label, mediatype=mediatype, delete=delete)
+    return dwca_generator(
+        dwca_path=dwca_path,
+        label=label,
+        mediatype=mediatype,
+        one_media_per_occurrence=one_media_per_occurrence,
+        license_info=license_info,
+        delete=delete,
+    )
