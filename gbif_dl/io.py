@@ -102,19 +102,16 @@ async def download_single(
         # do not overwrite, skips based on base path
         return
 
-    print("Downloading", url)
     async with session.get(url, proxy=proxy) as res:
         content = await res.read()
 
     # guess mimetype and suffix from content
     kind = filetype.guess(content)
     if kind is None:
-        print("Cannot guess file type!", url)
         return
     else:
         suffix = "." + kind.extension
         mime = kind.mime
-        print("got a", mime)
 
     # Check everything went well
     if res.status != 200:
