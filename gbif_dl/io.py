@@ -238,7 +238,7 @@ async def _download_from_asyncgen(
             for _ in range(nb_workers)
         ]
 
-        progressbar = tqdm(smoothing=0, unit=" Files", disable=verbose)
+        progressbar = tqdm(smoothing=0, unit=" Files in queue", disable=not verbose)
         # get chunks from async generator
         async with aiostream.stream.chunks(items, batch_size).stream() as chnk:
             async for batch in chnk:
