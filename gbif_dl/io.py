@@ -23,7 +23,7 @@ import aiofiles
 import aiohttp
 import aiostream
 from aiohttp_retry import RetryClient, ExponentialRetry
-from tqdm.asyncio import tqdm
+from tqdm.asyncio import tqdm, tqdm_asyncio
 from .utils import run_async
 
 
@@ -100,7 +100,7 @@ async def download_single(
     check_files_with_same_basename = label_path.glob(basename + "*")
     if list(check_files_with_same_basename) and not overwrite:
         # do not overwrite, skips based on base path
-        return
+        return False
 
     async with session.get(url, proxy=proxy) as res:
         content = await res.read()
@@ -116,12 +116,12 @@ async def download_single(
     # Check everything went well
     if res.status != 200:
         print(f"Download failed: {res.status}")
-        return
+        return False
 
     if is_valid_file is not None:
         if not is_valid_file(content):
             print(f"File check failed")
-            return
+            return False
 
     file_base_path = label_path / basename
     file_path = file_base_path.with_suffix(suffix)
@@ -133,15 +133,18 @@ async def download_single(
         async with aiofiles.open(json_path, mode="+w") as fp:
             await fp.write(json.dumps(label))
 
+    return True
 
 async def _download_queue(
     queue: asyncio.Queue,
     session: RetryClient,
     root: str,
+    stats,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     overwrite: bool = False,
     proxy: Optional[str] = None,
     random_subsets: Optional[dict] = None,
+    progressbar: tqdm_asyncio = None
 ):
     """Consumes items from download queue
 
@@ -165,9 +168,17 @@ async def _download_queue(
     while True:
         batch = await queue.get()
         for sample in batch:
-            await download_single(
-                sample, session, root, is_valid_file, overwrite, proxy, random_subsets
-            )
+            try:
+                result = await download_single(
+                    sample, session, root, is_valid_file, overwrite, proxy, random_subsets
+                )
+                if not result:
+                    stats["failed"] += 1
+                if result:
+                    progressbar.set_postfix(stats=stats, refresh=True)
+                    progressbar.update(1)
+            except Exception as e:
+                print(e)
         queue.task_done()
 
 
@@ -177,7 +188,7 @@ async def _download_from_asyncgen(
     tcp_connections: int = 64,
     nb_workers: int = 64,
     batch_size: int = 16,
-    retries: int = 3,
+    retries: int = 1,
     verbose: bool = False,
     overwrite: bool = False,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
@@ -192,7 +203,7 @@ async def _download_from_asyncgen(
         tcp_connections (int, optional): Maximum number of concurrent TCP connections. Defaults to 128.
         nb_workers (int, optional): Maximum number of workers. Defaults to 128.
         batch_size (int, optional): Maximum queue batch size. Defaults to 8.
-        retries (int, optional): Maximum number of retries. Defaults to 3.
+        retries (int, optional): Maximum number of attempts. Defaults to 1.
         verbose (bool, Optional): Activate verbose. Defaults to False.
         overwrite (bool): overwrite files with existing `baseline` signature, Defaults to False.
         is_valid_file (optional): A function that takes bytes
@@ -212,12 +223,14 @@ async def _download_from_asyncgen(
     """
 
     queue = asyncio.Queue(nb_workers)
+    progressbar = tqdm(smoothing=0, unit=" Downloads", disable=not verbose)
+    stats = {"failed": 0, "skipped": 0, "success": 0}
 
     retry_options = ExponentialRetry(attempts=retries)
 
     async with RetryClient(
         connector=aiohttp.TCPConnector(limit=tcp_connections),
-        raise_for_status=False,
+        raise_for_status=True,
         retry_options=retry_options,
         trust_env=True,
     ) as session:
@@ -229,21 +242,21 @@ async def _download_from_asyncgen(
                     queue,
                     session,
                     root=root,
+                    stats=stats,
                     overwrite=overwrite,
                     is_valid_file=is_valid_file,
                     proxy=proxy,
                     random_subsets=random_subsets,
+                    progressbar=progressbar
                 )
             )
             for _ in range(nb_workers)
         ]
 
-        progressbar = tqdm(smoothing=0, unit=" Files queued", disable=not verbose)
-        # get chunks from async generator
+        # get chunks from async generator and add to async queue
         async with aiostream.stream.chunks(items, batch_size).stream() as chnk:
             async for batch in chnk:
                 await queue.put(batch)
-                progressbar.update(len(batch))
 
         await queue.join()
 
@@ -257,7 +270,7 @@ def download(
     tcp_connections: int = 128,
     nb_workers: int = 128,
     batch_size: int = 16,
-    retries: int = 3,
+    retries: int = 1,
     verbose: bool = False,
     overwrite: bool = False,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
@@ -273,7 +286,7 @@ def download(
         tcp_connections (int, optional): Maximum number of concurrent TCP connections. Defaults to 128.
         nb_workers (int, optional): Maximum number of workers. Defaults to 128.
         batch_size (int, optional): Maximum queue batch size. Defaults to 8.
-        retries (int, optional): Maximum number of retries. Defaults to 3.
+        retries (int, optional): Maximum number of attempts. Defaults to 1, which means one try.
         verbose (bool, optional): Activate verbose. Defaults to False.
         overwrite (bool): overwrite files with existing `baseline` signature, Defaults to False.
         is_valid_file (optional): A function that takes bytes
