@@ -71,20 +71,23 @@ def dwca_generator(
                     else:
                         output_label = row.data
 
-                    media_data = {
-                        "url": url,
-                        "basename": hashed_url,
-                        "label": output_label,
-                    }
-                    if license_info:
-                        media_data["publisher"] = selected_img.get(mmqualname + "publisher", None)
-                        media_data["license"] = selected_img.get(mmqualname + "license", None)
-                        media_data["rightsHolder"] = selected_img.get(
-                            mmqualname + "rightsHolder",
-                            selected_img.get(mmqualname + "creator", None),
-                        )
+                    if output_label and len(output_label) and url and len(url):
+                        media_data = {
+                            "url": url,
+                            "basename": hashed_url,
+                            "label": output_label,
+                        }
+                        if license_info:
+                            media_data["publisher"] = selected_img.get(
+                                mmqualname + "publisher", None
+                            )
+                            media_data["license"] = selected_img.get(mmqualname + "license", None)
+                            media_data["rightsHolder"] = selected_img.get(
+                                mmqualname + "rightsHolder",
+                                selected_img.get(mmqualname + "creator", None),
+                            )
 
-                    yield media_data
+                        yield media_data
 
     if delete:
         os.remove(dwca_path)
