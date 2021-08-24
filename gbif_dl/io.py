@@ -28,7 +28,7 @@ from .utils import run_async
 
 
 class MediaData(TypedDict):
-    """ Media dict representation received from api or dwca generators"""
+    """Media dict representation received from api or dwca generators"""
 
     url: str
     basename: Optional[str]
@@ -135,6 +135,7 @@ async def download_single(
 
     return True
 
+
 async def _download_queue(
     queue: asyncio.Queue,
     session: RetryClient,
@@ -144,7 +145,7 @@ async def _download_queue(
     overwrite: bool = False,
     proxy: Optional[str] = None,
     random_subsets: Optional[dict] = None,
-    progressbar: tqdm_asyncio = None
+    progressbar: tqdm_asyncio = None,
 ):
     """Consumes items from download queue
 
@@ -247,7 +248,7 @@ async def _download_from_asyncgen(
                     is_valid_file=is_valid_file,
                     proxy=proxy,
                     random_subsets=random_subsets,
-                    progressbar=progressbar
+                    progressbar=progressbar,
                 )
             )
             for _ in range(nb_workers)
