@@ -4,6 +4,7 @@ Utility functions
 import asyncio
 import functools
 import threading
+from tqdm import tqdm
 from . import runners
 
 
@@ -60,3 +61,32 @@ def run_async(func, *args, **kwargs):
         return thread.result
     else:
         return runners.run(func(*args, **kwargs))
+
+
+def download_failed(status_code: int, url: str):
+    """Generate error message from url status code
+
+    Args:
+        status_code (int): request status code
+        url (str): url
+
+    Returns:
+        [bool]: download status
+    """
+    if status_code == 200:
+        return False
+    elif status_code in [301, 302]:
+        tqdm.write(f'>>> Warning: the website has redirected')
+        return True
+    elif status_code == 401:
+        tqdm.write(
+            '>>> Authorization failed!')
+        return True
+    elif status_code == 403:
+        tqdm.write(
+            '>>> Forbidden! Access to the requested resource was denied by the server')
+        return True
+    else:
+        tqdm.write(f'  Download from "{url}" failed,'
+                   f' The service returns code: {status_code}')
+        return True

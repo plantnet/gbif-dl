@@ -25,6 +25,7 @@ import aiostream
 from aiohttp_retry import RetryClient, ExponentialRetry
 from tqdm.asyncio import tqdm, tqdm_asyncio
 from .utils import run_async
+from .utils import download_failed
 
 
 class MediaData(TypedDict):
@@ -40,7 +41,7 @@ class MediaData(TypedDict):
 
 
 async def download_single(
-    item: MediaData,
+    item: Union[MediaData, str],
     session: RetryClient,
     root: str = "downloads",
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
@@ -51,8 +52,8 @@ async def download_single(
     """Async function to download single url to disk
 
     Args:
-        item (Dict): item details, including url and filename
-        session (RetryClient): aiohttp session
+        item (Dict or str): item dict or url.
+        session (RetryClient): aiohttp session.
         root (str, optional): Root path of download. Defaults to "downloads".
         is_valid_file (optional): A function that takes bytes
             and checks if the bytes originate from a valid file
@@ -108,15 +109,14 @@ async def download_single(
     # guess mimetype and suffix from content
     kind = filetype.guess(content)
     if kind is None:
-        return
+        return False
     else:
         suffix = "." + kind.extension
         mime = kind.mime
 
     # Check everything went well
     if res.status != 200:
-        print(f"Download failed: {res.status}")
-        return False
+        raise aiohttp.ClientResponseError
 
     if is_valid_file is not None:
         if not is_valid_file(content):
@@ -169,17 +169,24 @@ async def _download_queue(
     while True:
         batch = await queue.get()
         for sample in batch:
+            failed = False
             try:
                 result = await download_single(
                     sample, session, root, is_valid_file, overwrite, proxy, random_subsets
                 )
-                if not result:
-                    stats["failed"] += 1
-                if result:
-                    progressbar.set_postfix(stats=stats, refresh=True)
-                    progressbar.update(1)
             except Exception as e:
-                print(e)
+                failed = download_failed(e.status, e.request_info.url)
+
+            if failed:
+                stats["failed"] += 1
+            elif not result:
+                stats["skipped"] += 1
+            else:
+                stats["success"] += 1
+
+            progressbar.set_postfix(stats=stats, refresh=True)
+            progressbar.update(1)
+
         queue.task_done()
 
 
