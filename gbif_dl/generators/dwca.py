@@ -68,6 +68,8 @@ def dwca_generator(
 
                     if label is not None:
                         output_label = str(row.data.get(gbifqualname + label))
+                        if output_label is None or not output_label:
+                            continue
                     else:
                         output_label = row.data
 

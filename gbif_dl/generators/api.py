@@ -55,6 +55,8 @@ def gbif_query_generator(
             # store the valid label
             if label:
                 output_label = str(metadata.get(label, None))
+                if output_label is None or not output_label:
+                    continue
             else:
                 output_label = metadata
             if medias:
