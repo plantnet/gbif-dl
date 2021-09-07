@@ -209,8 +209,8 @@ async def _download_from_asyncgen(
         items (Union[Generator, AsyncGenerator]): (async/sync) generator that yiels a standardized dict of urls
         root (str, optional): Root path of downloads. Defaults to "data".
         tcp_connections (int, optional): Maximum number of concurrent TCP connections. Defaults to 128.
-        nb_workers (int, optional): Maximum number of workers. Defaults to 128.
-        batch_size (int, optional): Maximum queue batch size. Defaults to 8.
+        nb_workers (int, optional): Maximum number of workers. Defaults to 64.
+        batch_size (int, optional): Maximum queue batch size. Defaults to 16.
         retries (int, optional): Maximum number of attempts. Defaults to 1.
         verbose (bool, Optional): Activate verbose. Defaults to False.
         overwrite (bool): overwrite files with existing `baseline` signature, Defaults to False.
