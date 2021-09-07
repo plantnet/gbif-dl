@@ -76,17 +76,14 @@ def download_failed(status_code: int, url: str):
     if status_code == 200:
         return False
     elif status_code in [301, 302]:
-        tqdm.write(f'>>> Warning: the website has redirected')
+        tqdm.write(f">>> Warning: the website has redirected")
         return True
     elif status_code == 401:
-        tqdm.write(
-            '>>> Authorization failed!')
+        tqdm.write(">>> Authorization failed!")
         return True
     elif status_code == 403:
-        tqdm.write(
-            '>>> Forbidden! Access to the requested resource was denied by the server')
+        tqdm.write(">>> Forbidden! Access to the requested resource was denied by the server")
         return True
     else:
-        tqdm.write(f'  Download from "{url}" failed,'
-                   f' The service returns code: {status_code}')
+        tqdm.write(f'  Download from "{url}" failed,' f" The service returns code: {status_code}")
         return True
