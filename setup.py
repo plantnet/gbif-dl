@@ -20,7 +20,7 @@ setup(
         "aiofiles>=0.6.0",
         "aiohttp>=3.7.2",
         "aiohttp-retry>=2.3",
-        "aiostream>=0.4.1",
+        "aiostream>=0.4.3",
         "pygbif>=0.5.0",
         "pescador>=2.1.0",
         "python-dwca-reader",
