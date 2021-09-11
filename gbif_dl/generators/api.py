@@ -259,7 +259,9 @@ def generate_urls(
     else:
         if nb_samples and nb_samples_per_stream:
             nb_samples = min(nb_samples, nb_samples_per_stream)
-        print(nb_samples)
+        
+        if verbose:
+            print(nb_samples)
         return pescador.Streamer(
             gbif_query_generator,
             label=label,

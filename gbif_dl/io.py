@@ -9,6 +9,7 @@ import sys
 import json
 import hashlib
 import random
+import logging
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict  # pylint: disable=no-name-in-module
@@ -25,7 +26,6 @@ import aiostream
 from aiohttp_retry import RetryClient, ExponentialRetry
 from tqdm.asyncio import tqdm, tqdm_asyncio
 from .utils import run_async
-from .utils import download_failed
 
 
 class MediaData(TypedDict):
@@ -132,6 +132,7 @@ async def _download_queue(
     stats: dict,
     params: DownloadParams,
     progressbar: tqdm_asyncio = None,
+    logger: logging.Logger = None,
 ):
     """Consumes items from download queue
 
@@ -139,19 +140,21 @@ async def _download_queue(
         queue (asyncio.Queue): Queue of items
         session (RetryClient): RetryClient aiohttp session object
         params (DownloadParams): Download parameter dict
+        logger (logging.Logger): Logger object
     """
     while True:
         batch = await queue.get()
         for sample in batch:
             failed = False
             try:
-                result = await download_single(sample, session, params)
+                success = await download_single(sample, session, params)
             except Exception as e:
-                failed = download_failed(e.status, e.request_info.url)
+                logger.error(e.request_info.url, extra={"status": e.status})
+                failed = True
 
             if failed:
                 stats["failed"] += 1
-            elif not result:
+            elif not success:
                 stats["skipped"] += 1
             else:
                 stats["success"] += 1
@@ -169,7 +172,7 @@ async def _download_from_asyncgen(
     nb_workers: int = 64,
     batch_size: int = 16,
     retries: int = 1,
-    verbose: bool = False,
+    logger: logging.Logger = None,
 ):
     """Asynchronous downloader that takes an interable and downloads it
 
@@ -180,14 +183,19 @@ async def _download_from_asyncgen(
         nb_workers (int, optional): Maximum number of workers. Defaults to 64.
         batch_size (int, optional): Maximum queue batch size. Defaults to 16.
         retries (int, optional): Maximum number of attempts. Defaults to 1.
-        verbose (bool, Optional): Activate verbose. Defaults to False.
+        logger (logging.Logger, optional): Logger object. Defaults to None.
     Raises:
         NotImplementedError: If generator turns out to be invalid.
     """
 
     queue = asyncio.Queue(nb_workers)
-    progressbar = tqdm(smoothing=0, unit=" Downloads", disable=not verbose)
+    progressbar = tqdm(
+        smoothing=0, unit=" Downloads", disable=logger.getEffectiveLevel() > logging.INFO
+    )
     stats = {"failed": 0, "skipped": 0, "success": 0}
+
+    aiologger = logging.getLogger("aiohttp_retry")
+    aiologger.disabled = True
 
     retry_options = ExponentialRetry(attempts=retries)
 
@@ -196,12 +204,15 @@ async def _download_from_asyncgen(
         raise_for_status=True,
         retry_options=retry_options,
         trust_env=True,
+        logger=aiologger,
     ) as session:
 
         loop = asyncio.get_event_loop()
         workers = [
             loop.create_task(
-                _download_queue(queue, session, stats, params=params, progressbar=progressbar)
+                _download_queue(
+                    queue, session, stats, params=params, progressbar=progressbar, logger=logger
+                )
             )
             for _ in range(nb_workers)
         ]
@@ -218,13 +229,14 @@ async def _download_from_asyncgen(
 
 
 def download(
-    items: Union[Generator, AsyncGenerator, Iterable],
+    items: Union[Generator, AsyncGenerator, Iterable, Path],
     root: str = "data",
     tcp_connections: int = 128,
     nb_workers: int = 128,
     batch_size: int = 16,
     retries: int = 1,
-    verbose: bool = False,
+    loglevel: str = "INFO",
+    error_log_path: Path = None,
     overwrite: bool = False,
     is_valid_file: Optional[Callable[[bytes], bool]] = None,
     proxy: Optional[str] = None,
@@ -233,14 +245,18 @@ def download(
     """Core download function that takes an interable (sync or async)
 
     Args:
-        items (Union[Generator, AsyncGenerator, Iterable]): (async/sync) generator
-            or list that yiels a standardized dict of urls
+        items (Union[Generator, AsyncGenerator, Iterable, Path]): (async/sync) generator
+            list or path to text file that includes urls and optional labels.
+            The text file should have one url per line and optional data after a whitespace.
         root (str, optional): Root path of downloads. Defaults to "data".
         tcp_connections (int, optional): Maximum number of concurrent TCP connections. Defaults to 128.
         nb_workers (int, optional): Maximum number of workers. Defaults to 128.
         batch_size (int, optional): Maximum queue batch size. Defaults to 8.
         retries (int, optional): Maximum number of attempts. Defaults to 1, which means one try.
-        verbose (bool, optional): Activate verbose. Defaults to False.
+        loglevel (str, optional): Set logger logging level.
+            This shows failed downloads and a progressbar. Setting it to `ERROR` desables the progressbar.
+            Setting it to `CRITICAL` disables all logging. Defaults to `INFO`.
+        error_log_path (Path, optional): Writes errors to file. Defaults to None.
         overwrite (bool): overwrite files with existing `baseline` signature, Defaults to False.
         is_valid_file (optional): A function that takes bytes
             and checks if the bytes originate from a valid file
@@ -258,6 +274,11 @@ def download(
         NotImplementedError: If generator turns out to be invalid.
     """
 
+    if isinstance(items, (Path, str)):
+        if Path(items).exists():
+            # ignore all string after first space
+            items = [l.split(" ")[0] for l in Path(items).read_text().splitlines()]
+
     # check if the generator is async
     if not inspect.isasyncgen(items):
         # if its not, apply hack to make it async
@@ -270,6 +291,30 @@ def download(
         p = random_subsets.values()
         if sum(p) != 1.0:
             raise RuntimeError("Make sure that weight probabilities add up to one")
+
+    logger = logging.getLogger("error_urls")
+
+    # set log format suitable for error logs and io
+    formatter = logging.Formatter("%(message)s %(status)s")
+    # set default log level to only receive errors
+    logger.setLevel(loglevel)
+
+    handlers = []
+    if logger.getEffectiveLevel() <= logging.ERROR:
+        # write errors to std.out
+        sh = logging.StreamHandler(sys.stdout)
+        sh.setFormatter(formatter)
+        handlers.append(sh)
+        # in case an error path is set, also write errors to file
+        if isinstance(error_log_path, str):
+            fh = logging.FileHandler(error_log_path)
+            fh.setFormatter(formatter)
+            handlers.append(fh)
+
+    for handler in handlers:
+        logger.addHandler(handler)
+
+    logger.propagate = False
 
     params = {
         "root": root,
@@ -286,6 +331,6 @@ def download(
         nb_workers=nb_workers,
         batch_size=batch_size,
         retries=retries,
-        verbose=verbose,
+        logger=logger,
         params=params,
     )
