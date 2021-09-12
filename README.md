@@ -4,12 +4,12 @@
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/gbif-dl.svg)](https://pypi.python.org/pypi/gbif-dl)
 [![Documentation Status](https://img.shields.io/badge/docs-api-blue)](https://plantnet.github.io/gbif-dl/)
 
-
-this package makes it simpler to obtain media data from the GBIF database to be used for training __machine learning classification__ tasks. It wraps the [GBIF API](https://www.gbif.org/developer/summary) and supports directly querying the api to obtain and download a list of urls.
+this package makes it simpler to obtain media data from the GBIF database to be used for training **machine learning classification** tasks. It wraps the [GBIF API](https://www.gbif.org/developer/summary) and supports directly querying the api to obtain and download a list of urls.
 Existing saved queries can also be obtained using the download api of GBIF simply by providing GBIF DOI key.
 The package provides an efficient downloader that uses python asyncio modules to speed up downloading of many small files as typically occur in downloads.
 
 ## Disclaimer
+
 Unlike GBIF occurrences that all have a creative common license (CC0, CC BY, or CC BY-NC), GBIF [does not give any official recommendation](https://data-blog.gbif.org/post/gbif-multimedia/) for licensing shared media files. The License fields are essentially free text filled in by the data provider. Data providers are strongly encouraged to set their licenses in a machine-readable format, but there is no guarantee. Thus, it is the responsibility of GBIF-DL users to set up the appropriate filters on the license field and to respect the conditions of use of these licenses.
 
 Since we are heading into relatively new territory regarding the use of GBIF media files for machine learning, it is currently unclear how publishers will feel about this when learning that their photos are used in this way. At Pl@ntNet, the choice to publish our images in GBIF has been carefully considered and we are fully aware that they would probably be used for this purpose. But we fully understand that some other data providers didn't think of this and we are interested to have open discussion around these aspects.
@@ -21,6 +21,7 @@ Installation can be done via pip.
 ```
 pip install gbif-dl
 ```
+
 ## Usage
 
 The usage of `gbif-dl` helps users to create their own GBIF based media pipeline for training machine learning models. The package provides two core functionalities as followed:
@@ -52,7 +53,6 @@ queries = {
 }
 ```
 
-
 Give this query, we can pass this to the `api.generate_urls` function which returns a python
 generator:
 
@@ -78,18 +78,18 @@ each return entry is a dictionary of media attributes, to be consumed by the dow
 
 ```python
 {
-    'url': 'https://bs.plantnet.org/image/o/cfa25c7fb5cdf12719d1345769d3936d0ca73974', 
-    'basename': 'fdcc3440ab0e3abf824a5c68c864b018cccfcd3b', 
+    'url': 'https://bs.plantnet.org/image/o/cfa25c7fb5cdf12719d1345769d3936d0ca73974',
+    'basename': 'fdcc3440ab0e3abf824a5c68c864b018cccfcd3b',
     'label': '5352251'
 },
 {
-    'url': 'https://static.inaturalist.org/photos/58881180/original.jpeg?1577914533', 
-    'basename': '7db818c0708ba859516353ff9b30ef942aca19de', 
+    'url': 'https://static.inaturalist.org/photos/58881180/original.jpeg?1577914533',
+    'basename': '7db818c0708ba859516353ff9b30ef942aca19de',
     'label': '3189866'
 },
 {
-    'url': 'https://static.inaturalist.org/photos/58866788/original.jpeg?1577898729', 
-    'basename': '58ae3ef46e59e9a06d67de09c8b7ef3b8db3c85a', 
+    'url': 'https://static.inaturalist.org/photos/58866788/original.jpeg?1577898729',
+    'basename': '58ae3ef46e59e9a06d67de09c8b7ef3b8db3c85a',
     'label': '3189866'
 }
 ```
@@ -98,8 +98,8 @@ each return entry is a dictionary of media attributes, to be consumed by the dow
 
 Very often users won't be using all media downloads from a given query since this often results in datasets with heavily inbalanced number of samples per label. When generating urls from the API, users can specify certain additional attributes to influence the sampling process. For example, to balance the dataset by the dataset provider and by the species the following arguments can be used:
 
-* `split_streams_by`: splits the query into combination of several substreams where each stream represents the product of the query values. When combined with `nb_samples`, this produces a balanced dataset where each stream yields the same number of samples.
-* `nb_samples`: an integer that limits the total number of samples to be generated from the balanced streams. E.g, this can be used to just get `100` samples from the api. When set to `-1`, the minimum number of samples from all streams is used, hence this results in the __maximum number of balanced__ sampled from all streams.
+- `split_streams_by`: splits the query into combination of several substreams where each stream represents the product of the query values. When combined with `nb_samples`, this produces a balanced dataset where each stream yields the same number of samples.
+- `nb_samples`: an integer that limits the total number of samples to be generated from the balanced streams. E.g, this can be used to just get `100` samples from the api. When set to `-1`, the minimum number of samples from all streams is used, hence this results in the **maximum number of balanced** sampled from all streams.
 
 In the following example, we will receive a balanced dataset assembled from `3 species * 2 datasets = 6 streams` and only get minumum number of total samples from all 6 streams:
 
@@ -114,8 +114,8 @@ data_generator = gbif_dl.api.generate_urls(
 
 For other, more advanced, use-cases users can add more constraints:
 
-* `nb_samples_per_stream`: put a hard __limit__ on the _maximum number of samples_ to be yielded by a stream.
-* `weighted_streams`: weights each stream by its original distribution. That way users can get a smaller subset of the data but keep the original __unbalanced__ distribution of the data.
+- `nb_samples_per_stream`: put a hard **limit** on the _maximum number of samples_ to be yielded by a stream.
+- `weighted_streams`: weights each stream by its original distribution. That way users can get a smaller subset of the data but keep the original **unbalanced** distribution of the data.
 
 The following dataset consist of exactly 1000 samples for which the distribution of `speciesKey` is maintained from the full query of all samples. Furthermore, we only allow a maxmimum of 800 samples per species.
 
@@ -134,7 +134,7 @@ data_generator = gbifmediads.api.generate_urls(
 
 A url generator can also be created from a GBIF download link given a registered DOI or a GBIF download ID. In the following example we will be downloading and parse DWCA archive [that should yield the same results as in the query example above.](https://www.gbif.org/occurrence/download/0117522-200613084148143).
 
-* `dwca_root_path`: Set root path where to store the DWCA zip files. Defaults to None, which results in the creation of a temporary directory, If the path and DWCA archive already exist, it will not be downloaded again.
+- `dwca_root_path`: Set root path where to store the DWCA zip files. Defaults to None, which results in the creation of a temporary directory, If the path and DWCA archive already exist, it will not be downloaded again.
 
 The following example creates a data_generator with the the same output class label as in the example above.
 
@@ -143,15 +143,16 @@ data_generator = gbif_dl.dwca.generate_urls(
     "10.15468/dl.vnm42s", dwca_root_path="dwcas", label="speciesKey"
 )
 ```
+
 ### Downloading images to disk
 
 Downloading from a url generator can simply be done by running.
 
 ```python
-gbif_dl.io.download(data_generator, root="my_dataset")
+stats = gbif_dl.io.download(data_generator, root="my_dataset")
 ```
 
-The downloader provides very fast download speeds by using an async queue. Some fail-safe functionality is provided by setting the number of `retries`, default to 3.
+The downloader provides very fast download speeds by using an async queue. Some fail-safe functionality can be provided by setting the number of `retries` to higher than 1.
 
 ### Training Datasets
 
