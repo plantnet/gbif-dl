@@ -10,6 +10,7 @@ import json
 import hashlib
 import random
 import logging
+from tqdm.contrib.logging import logging_redirect_tqdm
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict  # pylint: disable=no-name-in-module
@@ -149,8 +150,9 @@ async def _download_queue(
             try:
                 success = await download_single(sample, session, params)
             except Exception as e:
-                logger.error(e.request_info.url, extra={"status": e.status})
-                failed = True
+                with logging_redirect_tqdm(loggers=[logger]):
+                    logger.error(e.request_info.url, extra={"status": e.status})
+                    failed = True
 
             if failed:
                 stats["failed"] += 1
@@ -194,9 +196,6 @@ async def _download_from_asyncgen(
     )
     stats = {"failed": 0, "skipped": 0, "success": 0}
 
-    aiologger = logging.getLogger("aiohttp_retry")
-    aiologger.disabled = True
-
     retry_options = ExponentialRetry(attempts=retries)
 
     async with RetryClient(
@@ -204,7 +203,6 @@ async def _download_from_asyncgen(
         raise_for_status=True,
         retry_options=retry_options,
         trust_env=True,
-        logger=aiologger,
     ) as session:
 
         loop = asyncio.get_event_loop()
