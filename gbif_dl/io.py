@@ -225,6 +225,8 @@ async def _download_from_asyncgen(
     for w in workers:
         w.cancel()
 
+    return stats
+
 
 def download(
     items: Union[Generator, AsyncGenerator, Iterable, Path],
@@ -267,6 +269,9 @@ def download(
             e.g. `{'train': 0.9, test': 0.1}` will result in 90% of the items
             go into a `train` subfolder and 10% into a `test` subfolder.
             The propabilities have to sum up to `1.0` to avoid an error.
+
+    Returns:
+        dict: A dict of download statistics.
 
     Raises:
         NotImplementedError: If generator turns out to be invalid.
