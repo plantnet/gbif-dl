@@ -254,7 +254,7 @@ def download(
         batch_size (int, optional): Maximum queue batch size. Defaults to 8.
         retries (int, optional): Maximum number of attempts. Defaults to 1, which means one try.
         loglevel (str, optional): Set logger logging level.
-            This shows failed downloads and a progressbar. Setting it to `ERROR` desables the progressbar.
+            This shows failed downloads and a progressbar. Setting it to `ERROR` disables the progressbar.
             Setting it to `CRITICAL` disables all logging. Defaults to `INFO`.
         error_log_path (Path, optional): Writes errors to file. Defaults to None.
         overwrite (bool): overwrite files with existing `baseline` signature, Defaults to False.
