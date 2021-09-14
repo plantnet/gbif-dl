@@ -21,6 +21,11 @@ def urls(request):
     ]
 
 
+@pytest.fixture
+def bad_urls(request):
+    return ["https://bs.plantnet.org/image/o/wronghash"]
+
+
 async def async_gen_from_list(rows):
     for i in rows:
         yield i
@@ -43,3 +48,8 @@ def test_download_fromgen(urls):
 
 def test_download_fromasybc(urls):
     gbif_dl.io.download(async_gen_from_list(urls), root="root")
+
+
+def test_download_error(bad_urls):
+    stats = gbif_dl.io.download(bad_urls)
+    assert stats["failed"] == 1
