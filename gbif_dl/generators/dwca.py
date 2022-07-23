@@ -13,7 +13,6 @@ import re
 import tempfile
 from typing import Optional
 import os
-from collections import Counter
 
 from ..io import MediaData
 
@@ -93,24 +92,6 @@ def dwca_generator(
         os.remove(dwca_path)
 
 
-def balanced_dwca_generator(dwca_path, label="speciesKey", mediatype="StillImage", license_info=True,
-                            one_media_per_occurrence=True, delete=False):
-    media_datas = list(dwca_generator(dwca_path, label=label, mediatype=mediatype, license_info=license_info,
-                                      one_media_per_occurrence=one_media_per_occurrence, delete=delete))
-    labels = [item["label"] for item in media_datas]
-    counter_labels = Counter(labels)
-    min_sample = min(list(counter_labels.values()))
-
-    return_counter = {key: 0 for key in set(labels)}
-    for media_data in media_datas:
-        label = media_data["label"]
-        if return_counter[label] >= min_sample:
-            pass
-        else:
-            return_counter[label] += 1
-            yield media_data
-
-
 def doi_to_gbif_key(doi: str) -> str:
     """get gbif download id from doi
 
@@ -155,7 +136,6 @@ def is_doi(identifier: str) -> bool:
 def generate_urls(
     identifier: str,
     dwca_root_path=None,
-    balanced: bool = False,
     label: Optional[str] = None,
     mediatype: Optional[str] = "StillImage",
     license_info: bool = True,
@@ -181,7 +161,7 @@ def generate_urls(
     Returns:
         Iterable: item generator that yields files from generator
     """
-    if is_doi(identifier):
+    if is_doi:
         key = doi_to_gbif_key(identifier)
     else:
         key = identifier
@@ -198,22 +178,11 @@ def generate_urls(
         dwca_path = r["path"]
 
     # extract media urls and return item generator
-
-    if balanced:
-        return balanced_dwca_generator(
-            dwca_path=dwca_path,
-            label=label,
-            mediatype=mediatype,
-            one_media_per_occurrence=one_media_per_occurrence,
-            license_info=license_info,
-            delete=delete)
-    else:
-        return dwca_generator(
-            dwca_path=dwca_path,
-            label=label,
-            mediatype=mediatype,
-            one_media_per_occurrence=one_media_per_occurrence,
-            license_info=license_info,
-            delete=delete
+    return dwca_generator(
+        dwca_path=dwca_path,
+        label=label,
+        mediatype=mediatype,
+        one_media_per_occurrence=one_media_per_occurrence,
+        license_info=license_info,
+        delete=delete,
     )
-
