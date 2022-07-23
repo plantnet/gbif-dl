@@ -13,8 +13,11 @@ import re
 import tempfile
 from typing import Optional
 import os
+import typer
 
-from ..io import MediaData
+# from ..io import MediaData
+from gbif_dl.io import MediaData
+
 
 from dwca.read import DwCAReader
 from typing import Optional
@@ -186,3 +189,7 @@ def generate_urls(
         license_info=license_info,
         delete=delete,
     )
+
+
+if __name__ == "__main__":
+    typer.run(generate_urls)
