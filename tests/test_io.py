@@ -38,18 +38,18 @@ def gen_from_list(rows):
 
 
 def test_download_list(urls):
-    gbif_dl.io.download(urls, root="root")
+    gbif_dl.stores.dl_async.download(urls, root="root")
 
 
 def test_download_fromgen(urls):
     """Currently failes because some async stuff"""
-    gbif_dl.io.download(gen_from_list(urls), root="root")
+    gbif_dl.stores.dl_async.download(gen_from_list(urls), root="root")
 
 
 def test_download_fromasybc(urls):
-    gbif_dl.io.download(async_gen_from_list(urls), root="root")
+    gbif_dl.stores.dl_async.download(async_gen_from_list(urls), root="root")
 
 
 def test_download_error(bad_urls):
-    stats = gbif_dl.io.download(bad_urls)
+    stats = gbif_dl.stores.dl_async.download(bad_urls)
     assert stats["failed"] == 1

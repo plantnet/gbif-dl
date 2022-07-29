@@ -9,11 +9,10 @@ queries = {
     "datasetKey": ["7a3679ef-5582-4aaa-81f0-8c2545cafc81", "50c9509d-22c7-4a22-a47d-8c48425ef4a7"],
 }
 
+data_generator = gbif_dl.api.generate_urls(queries=queries, label="speciesKey", nb_samples=1000)
+gbif_dl.export.to_csv(data_generator, "urls.csv")
 
-data_generator = gbif_dl.api.generate_urls(queries=queries, label="speciesKey", nb_samples=2)
-
-for data in data_generator:
-    print("boom")
+# gbif_dl.download(data_generator, root="download_test")
 
 # import filetype
 

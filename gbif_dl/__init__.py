@@ -10,6 +10,6 @@ This is the python package API documentation.
 Please checkout [github repository](https://github.com/plantnet/gbif-dl) for more information.
 """
 
-from . import io
+from .stores import dl_async, export, MediaData
 from .generators import dwca
 from .generators import api

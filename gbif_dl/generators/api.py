@@ -11,7 +11,7 @@ import hashlib
 import logging
 import numpy as np
 
-from ..io import MediaData
+from ..stores import MediaData
 
 from typing import Dict, Optional, Union, List
 
