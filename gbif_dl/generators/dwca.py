@@ -14,7 +14,7 @@ import tempfile
 from typing import Optional
 import os
 
-from ..io import MediaData
+from ..stores import MediaData
 
 from dwca.read import DwCAReader
 from typing import Optional

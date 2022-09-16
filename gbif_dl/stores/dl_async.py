@@ -26,19 +26,8 @@ import aiohttp
 import aiostream
 from aiohttp_retry import RetryClient, ExponentialRetry
 from tqdm.asyncio import tqdm, tqdm_asyncio
-from .utils import run_async
-
-
-class MediaData(TypedDict):
-    """Media dict representation received from api or dwca generators"""
-
-    url: str
-    basename: Optional[str]
-    label: Optional[str]
-    subset: Optional[str]
-    publisher: Optional[str]
-    license: Optional[str]
-    rightsHolder: Optional[str]
+from ..utils import run_async
+from . import MediaData
 
 
 class DownloadParams(TypedDict):
