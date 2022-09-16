@@ -65,7 +65,7 @@ data_generator = gbif_dl.api.generate_urls(
 ```
 
 Additionally we have to specify the output `label` from the occurances which doesn't
-necessarily have to be part of the query attributes. The `label` is later used to store the data in hierachical structure: `label/image.jpg`.
+necessarily have to be part of the query attributes. The `label` is later used to classify the results and store the data in hierachical structure: `label/image.jpg`.
 
 Iterating over the generator now yields the media data returning a few thousand urls.
 
