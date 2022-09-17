@@ -91,6 +91,13 @@ def gbif_query_generator(
             offset = resp["offset"] + page_limit
 
 
+def gbif_random_query_generator(**kwargs):
+    media_datas = list(gbif_query_generator(**kwargs))
+    random.Random(4).shuffle(media_datas)
+    for media_data in media_datas:
+        yield media_data
+
+
 def gbif_count(mediatype: str = "StillImage", *args, **kwargs) -> str:
     """Count the number of occurrences from given query
 
@@ -206,7 +213,7 @@ def generate_urls(
             streams.append(
                 pescador.Streamer(
                     pescador.Streamer(
-                        gbif_query_generator,
+                        gbif_random_query_generator,
                         label=label,
                         mediatype=mediatype,
                         subset=subset,
@@ -225,7 +232,6 @@ def generate_urls(
             nb_queries = [
                 gbif_count(mediatype=mediatype, **q, **b) for b in _dproduct(balance_queries)
             ]
-            print(sum(nb_queries))
 
         # count the available occurances for each stream and select the min.
         # We only yield the minimum of streams to balance
@@ -263,7 +269,7 @@ def generate_urls(
         if verbose:
             print(nb_samples)
         return pescador.Streamer(
-            gbif_query_generator,
+            gbif_random_query_generator,
             label=label,
             mediatype=mediatype,
             license_info=license_info,
