@@ -149,7 +149,7 @@ data_generator = gbif_dl.dwca.generate_urls(
 Downloading from a url generator can simply be done by running.
 
 ```python
-stats = gbif_dl.io.download(data_generator, root="my_dataset")
+stats = gbif_dl.stores.dl_async.download(data_generator, root="my_dataset")
 ```
 
 The downloader provides very fast download speeds by using an async queue. Some fail-safe functionality can be provided by setting the number of `retries` to higher than 1.
