@@ -55,6 +55,11 @@ def dwca_generator(
                     if ext.data[mmqualname + "type"] == mediatype:
                         img_extensions.append(ext.data)
 
+            # skip rows with no image data, 
+            # random.choice() will fail with an empty list
+            if not img_extensions:
+                continue
+
             if one_media_per_occurrence:
                 media = [random.choice(img_extensions)]
             else:
