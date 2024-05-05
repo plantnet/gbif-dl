@@ -22,6 +22,7 @@ from typing import Optional
 mmqualname = "http://purl.org/dc/terms/"
 gbifqualname = "http://rs.gbif.org/terms/1.0/"
 
+dwca_generator_random_seed = 10
 
 def dwca_generator(
     dwca_path: str,
@@ -30,6 +31,7 @@ def dwca_generator(
     license_info: bool = True,
     one_media_per_occurrence: bool = True,
     delete: Optional[bool] = False,
+    random_seed = dwca_generator_random_seed
 ) -> MediaData:
     """Yields media urls from GBIF Darwin Core Archive
 
@@ -44,6 +46,11 @@ def dwca_generator(
     Yields:
         Dict: Item dictionary
     """
+
+    # make random choice of one_media_per_occurrence reproducible;
+    # otherwise, multiple instances of the dwca_generator result in different sets of media urls 
+    rnd = random.Random(random_seed)
+
     with DwCAReader(dwca_path) as dwca:
         for row in dwca:
             img_extensions = []
@@ -61,7 +68,7 @@ def dwca_generator(
                 continue
 
             if one_media_per_occurrence:
-                media = [random.choice(img_extensions)]
+                media = [rnd.choice(img_extensions)]
             else:
                 media = img_extensions
 
@@ -146,6 +153,7 @@ def generate_urls(
     license_info: bool = True,
     one_media_per_occurrence: bool = True,
     delete: Optional[bool] = False,
+    random_seed = dwca_generator_random_seed
 ):
     """Generate GBIF items from DOI or GBIF download key
 
@@ -190,4 +198,5 @@ def generate_urls(
         one_media_per_occurrence=one_media_per_occurrence,
         license_info=license_info,
         delete=delete,
+        random_seed=random_seed
     )
