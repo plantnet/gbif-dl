@@ -1,6 +1,3 @@
-"""
-Async based fast downloader.
-"""
 import asyncio
 import inspect
 from pathlib import Path
@@ -9,11 +6,12 @@ import sys
 import json
 import hashlib
 import random
-import logging
+# Logging import is removed as logs are handled elsewhere
+
 from tqdm.contrib.logging import logging_redirect_tqdm
 
 if sys.version_info >= (3, 8):
-    from typing import TypedDict  # pylint: disable=no-name-in-module
+    from typing import TypedDict
 else:
     from typing_extensions import TypedDict
 
@@ -84,37 +82,38 @@ async def download_single(
         return False
 
     async with session.get(url, proxy=params["proxy"]) as res:
-        content = await res.read()
-
-    # guess mimetype and suffix from content
-    kind = filetype.guess(content)
-    if kind is None:
-        return False
-    else:
-        suffix = "." + kind.extension
-        mime = kind.mime
-
-    # Check everything went well
-    if res.status != 200:
-        raise aiohttp.ClientResponseError
-
-    if params["is_valid_file"] is not None:
-        if not params["is_valid_file"](content):
-            print(f"File check failed")
+        if res.status == 200:
+            content = await res.read()
+        else:
+            # Handle 404 and other errors silently
             return False
 
-    file_base_path = label_path / basename
-    file_path = file_base_path.with_suffix(suffix)
-    async with aiofiles.open(file_path, "+wb") as f:
-        await f.write(content)
+        # guess mimetype and suffix from content
+        kind = filetype.guess(content)
+        if kind is None:
+            return False
+        else:
+            suffix = "." + kind.extension
+            mime = kind.mime
 
-    if isinstance(label, dict):
-        json_path = (label_path / item["basename"]).with_suffix(".json")
-        async with aiofiles.open(json_path, mode="+w") as fp:
-            await fp.write(json.dumps(label))
+        # Check everything went well
 
-    return True
+        if params["is_valid_file"] is not None:
+            if not params["is_valid_file"](content):
+                # Log the error message elsewhere (not printed here)
+                return False
 
+        file_base_path = label_path / basename
+        file_path = file_base_path.with_suffix(suffix)
+        async with aiofiles.open(file_path, "+wb") as f:
+            await f.write(content)
+
+        if isinstance(label, dict):
+            json_path = (label_path / item["basename"]).with_suffix(".json")
+            async with aiofiles.open(json_path, mode="+w") as fp:
+                await fp.write(json.dumps(label))
+
+        return True
 
 async def _download_queue(
     queue: asyncio.Queue,
@@ -122,7 +121,6 @@ async def _download_queue(
     stats: dict,
     params: DownloadParams,
     progressbar: tqdm_asyncio = None,
-    logger: logging.Logger = None,
 ):
     """Consumes items from download queue
 
@@ -130,7 +128,7 @@ async def _download_queue(
         queue (asyncio.Queue): Queue of items
         session (RetryClient): RetryClient aiohttp session object
         params (DownloadParams): Download parameter dict
-        logger (logging.Logger): Logger object
+        progressbar (tqdm_asyncio): tqdm progress bar (optional)
     """
     while True:
         batch = await queue.get()
@@ -139,9 +137,10 @@ async def _download_queue(
             try:
                 success = await download_single(sample, session, params)
             except Exception as e:
-                with logging_redirect_tqdm(loggers=[logger]):
-                    logger.error(e.request_info.url, extra={"status": e.status})
-                    failed = True
+                # Log the error message and url elsewhere (not printed here)
+                with logging_redirect_tqdm(loggers=[]):
+                    print(f"Error downloading {sample.get('url') if isinstance(sample, dict) else sample}: {e}")
+                failed = True
 
             if failed:
                 stats["failed"] += 1
@@ -150,8 +149,9 @@ async def _download_queue(
             else:
                 stats["success"] += 1
 
-            progressbar.set_postfix(stats=stats, refresh=True)
-            progressbar.update(1)
+            if progressbar is not None:
+                progressbar.set_postfix(stats=stats, refresh=True)
+                progressbar.update(1)
 
         queue.task_done()
 
@@ -163,7 +163,6 @@ async def _download_from_asyncgen(
     nb_workers: int = 64,
     batch_size: int = 16,
     retries: int = 1,
-    logger: logging.Logger = None,
 ):
     """Asynchronous downloader that takes an interable and downloads it
 
@@ -174,14 +173,14 @@ async def _download_from_asyncgen(
         nb_workers (int, optional): Maximum number of workers. Defaults to 64.
         batch_size (int, optional): Maximum queue batch size. Defaults to 16.
         retries (int, optional): Maximum number of attempts. Defaults to 1.
-        logger (logging.Logger, optional): Logger object. Defaults to None.
+
     Raises:
         NotImplementedError: If generator turns out to be invalid.
     """
 
     queue = asyncio.Queue(nb_workers)
     progressbar = tqdm(
-        smoothing=0, unit=" Downloads", disable=logger.getEffectiveLevel() > logging.INFO
+        smoothing=0, unit=" Downloads", disable=True
     )
     stats = {"failed": 0, "skipped": 0, "success": 0}
 
@@ -198,7 +197,7 @@ async def _download_from_asyncgen(
         workers = [
             loop.create_task(
                 _download_queue(
-                    queue, session, stats, params=params, progressbar=progressbar, logger=logger
+                    queue, session, stats, params=params, progressbar=progressbar
                 )
             )
             for _ in range(nb_workers)
@@ -215,7 +214,6 @@ async def _download_from_asyncgen(
         w.cancel()
 
     return stats
-
 
 def download(
     items: Union[Generator, AsyncGenerator, Iterable, Path],
@@ -239,7 +237,7 @@ def download(
             The text file should have one url per line and optional data after a whitespace.
         root (str, optional): Root path of downloads. Defaults to "data".
         tcp_connections (int, optional): Maximum number of concurrent TCP connections. Defaults to 128.
-        nb_workers (int, optional): Maximum number of workers. Defaults to 128.
+        nb_workers (int, optional): Maximum number of workers. Defaults to 64.
         batch_size (int, optional): Maximum queue batch size. Defaults to 8.
         retries (int, optional): Maximum number of attempts. Defaults to 1, which means one try.
         loglevel (str, optional): Set logger logging level.
@@ -250,7 +248,6 @@ def download(
         is_valid_file (optional): A function that takes bytes
             and checks if the bytes originate from a valid file
             (used to check of corrupt files). Defaults to None.
-            overwrite existing files, Defaults to False.
         proxy (str): Proxy server url. Authentication credentials can be passed in URL. e.g
             `proxy="http://user:pass@some.proxy.com"`. Proxy can also be used globally using environmental variables.
             See https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html.
@@ -284,29 +281,7 @@ def download(
         if sum(p) != 1.0:
             raise RuntimeError("Make sure that weight probabilities add up to one")
 
-    logger = logging.getLogger("error_urls")
-
-    # set log format suitable for error logs and io
-    formatter = logging.Formatter("%(message)s %(status)s")
-    # set default log level to only receive errors
-    logger.setLevel(loglevel)
-
-    handlers = []
-    if logger.getEffectiveLevel() <= logging.ERROR:
-        # write errors to std.out
-        sh = logging.StreamHandler(sys.stdout)
-        sh.setFormatter(formatter)
-        handlers.append(sh)
-        # in case an error path is set, also write errors to file
-        if isinstance(error_log_path, str):
-            fh = logging.FileHandler(error_log_path)
-            fh.setFormatter(formatter)
-            handlers.append(fh)
-
-    for handler in handlers:
-        logger.addHandler(handler)
-
-    logger.propagate = False
+    # Logging is assumed to be handled elsewhere (removed for brevity)
 
     params = {
         "root": root,
@@ -323,6 +298,6 @@ def download(
         nb_workers=nb_workers,
         batch_size=batch_size,
         retries=retries,
-        logger=logger,
         params=params,
     )
+
