@@ -8,6 +8,8 @@ this package makes it simpler to obtain media data from the GBIF database to be 
 Existing saved queries can also be obtained using the download api of GBIF simply by providing GBIF DOI key.
 The package provides an efficient downloader that uses python asyncio modules to speed up downloading of many small files as typically occur in downloads.
 
+➡️ You may find [gbifxdl]([url](https://github.com/GuillaumeMougeot/gbifxdl)) interesting and more complete. GBIF-dl does not currently have a maintainer but may still work for you.
+
 ## Disclaimer
 
 Unlike GBIF occurrences that all have a creative common license (CC0, CC BY, or CC BY-NC), GBIF [does not give any official recommendation](https://data-blog.gbif.org/post/gbif-multimedia/) for licensing shared media files. The License fields are essentially free text filled in by the data provider. Data providers are strongly encouraged to set their licenses in a machine-readable format, but there is no guarantee. Thus, it is the responsibility of GBIF-DL users to set up the appropriate filters on the license field and to respect the conditions of use of these licenses.
