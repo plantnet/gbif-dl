@@ -8,7 +8,7 @@ this package makes it simpler to obtain media data from the GBIF database to be 
 Existing saved queries can also be obtained using the download api of GBIF simply by providing GBIF DOI key.
 The package provides an efficient downloader that uses python asyncio modules to speed up downloading of many small files as typically occur in downloads.
 
-➡️ You may find [gbifxdl]([url](https://github.com/GuillaumeMougeot/gbifxdl)) interesting and more complete. GBIF-dl does not currently have a maintainer but may still work for you.
+➡️ You may find [gbifxdl](https://github.com/GuillaumeMougeot/gbifxdl) interesting and more complete. GBIF-dl does not currently have a maintainer but may still work for you.
 
 ## Disclaimer
 
