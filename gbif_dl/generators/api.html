@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<meta name="generator" content="pdoc3 0.11.0">
+<title>gbif_dl.generators.api API documentation</title>
+<meta name="description" content="This module creates the interface to the GBIF API. By providing queries to the api, users can use
+this module to obtain lists of urls of media data …">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:1.5em;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:2em 0 .50em 0}h3{font-size:1.4em;margin:1.6em 0 .7em 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .2s ease-in-out}a:visited{color:#503}a:hover{color:#b62}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900;font-weight:bold}pre code{font-size:.8em;line-height:1.4em;padding:1em;display:block}code{background:#f3f3f3;font-family:"DejaVu Sans Mono",monospace;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em 1em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul ul{padding-left:1em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script type="text/x-mathjax-config">MathJax.Hub.Config({ tex2jax: { inlineMath: [ ['$','$'], ["\\(","\\)"] ], processEscapes: true } });</script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS_CHTML" integrity="sha256-kZafAc6mZvK3W3v1pHOcUix30OHQN6pU/NO2oFkqZVw=" crossorigin></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha512-D9gUyxqja7hBtkWpPWGt9wfbfaMGVt9gnyCvYa+jojwwPHLCzUm5i8rpk7vD7wNee9bA35eYIjobYPaQuKS1MQ==" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => {
+hljs.configure({languages: ['bash', 'css', 'diff', 'graphql', 'ini', 'javascript', 'json', 'plaintext', 'python', 'python-repl', 'rust', 'shell', 'sql', 'typescript', 'xml', 'yaml']});
+hljs.highlightAll();
+})</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>gbif_dl.generators.api</code></h1>
+</header>
+<section id="section-intro">
+<p>This module creates the interface to the GBIF API. By providing queries to the api, users can use
+this module to obtain lists of urls of media data to be downloaded using the <a href="gbif_dl.io">io</a> module.</p>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="gbif_dl.generators.api.gbif_count"><code class="name flex">
+<span>def <span class="ident">gbif_count</span></span>(<span>mediatype: str = 'StillImage', *args, **kwargs) ‑> str</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Count the number of occurrences from given query</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>mediatype</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>[description]. Defaults to 'StillImage'.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>str</code></dt>
+<dd>[description]</dd>
+</dl></div>
+</dd>
+<dt id="gbif_dl.generators.api.gbif_query_generator"><code class="name flex">
+<span>def <span class="ident">gbif_query_generator</span></span>(<span>page_limit: int = 300, mediatype: str = 'StillImage', license_info: bool = True, one_media_per_occurrence: bool = True, label: Optional[str] = None, subset: Optional[str] = None, *args, **kwargs) ‑> <a title="gbif_dl.stores.MediaData" href="../stores/index.html#gbif_dl.stores.MediaData">MediaData</a></span>
+</code></dt>
+<dd>
+<div class="desc"><p>Performs media queries GBIF yielding url and label</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>page_limit</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>GBIF api uses paging which can be modified. Defaults to 300.</dd>
+<dt><strong><code>mediatype</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Sets GBIF mediatype. Defaults to 'StillImage'.</dd>
+<dt><strong><code>license_info</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Retrieve images license information. Default to True.</dd>
+<dt><strong><code>one_media_per_occurrence</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Only pick one image per occurrence. Default to True.</dd>
+<dt><strong><code>label</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Output label name. Defaults to <code>None</code>.</dd>
+<dt><strong><code>subset</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Subset name. Defaults to <code>None</code>.</dd>
+</dl>
+<h2 id="yields">Yields</h2>
+<p>MediaData</p></div>
+</dd>
+<dt id="gbif_dl.generators.api.generate_urls"><code class="name flex">
+<span>def <span class="ident">generate_urls</span></span>(<span>queries: Dict[~KT, ~VT], label: Optional[str] = None, split_streams_by: Union[str, List[~T], None] = None, subset_streams: Union[str, Dict[~KT, ~VT], None] = None, nb_samples_per_stream: Optional[int] = None, nb_samples: Optional[int] = None, weighted_streams: bool = False, cache_requests: bool = False, mediatype: str = 'StillImage', license_info: bool = True, one_media_per_occurrence: bool = True, verbose: bool = False)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Provides url generator from given query</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>queries</code></strong> :&ensp;<code>Dict</code></dt>
+<dd>dictionary of queries supported by the GBIF api</dd>
+<dt><strong><code>label</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Output label name.
+Defaults to <code>None</code> which yields all metadata.</dd>
+<dt><strong><code>nb_samples</code></strong> :&ensp;<code>int</code></dt>
+<dd>Limit the total number of samples retrieved from the API.
+When set to -1 and <code>split_streams_by</code> is not <code>None</code>,
+a minimum number of samples will be calculated
+from using the number of available samples per stream.
+Defaults to <code>None</code> which retrieves all samples from all streams until
+all streams are exchausted.</dd>
+<dt><strong><code>nb_samples_per_stream</code></strong> :&ensp;<code>int</code></dt>
+<dd>Limit the maximum number of items to be retrieved per stream.
+Defaults to <code>None</code> which retrieves all samples from stream until
+stream generator is exhausted.</dd>
+<dt><strong><code>split_streams_by</code></strong> :&ensp;<code>Optional[Union[str, List]]</code>, optional</dt>
+<dd>Stream identifiers to be balanced.
+Defaults to None.</dd>
+<dt><strong><code>subset_streams</code></strong> :&ensp;<code>Optional[Union[str, Dict]]</code>, optional</dt>
+<dd>Map certain streams into
+separate subsets, by setting the <code>subset</code> metadata. Supports a remainder
+value of <code>"*"</code> which acts as a wildcard. Defaults to None.
+E.g. <code>subset_streams={"train": { "speciesKey": [5352251, 3190653]},
+"test": { "speciesKey": "*" }}</code> will move species of 5352251 and 3190653
+into <code>train</code> whereas all other species will go into test.</dd>
+<dt><strong><code>weighted_streams</code></strong> :&ensp;<code>int</code></dt>
+<dd>Calculates sampling weights for all streams and applies them during
+sampling. To be combined with nb_samples not <code>None</code>.
+Defaults to <code>False</code>.</dd>
+<dt><strong><code>cache_requests</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Enable GBIF API cache.
+Can significantly improve API requests. Defaults to False.</dd>
+<dt><strong><code>mediatype</code></strong> :&ensp;<code>str</code></dt>
+<dd>supported GBIF media type. Can be <code>StillImage</code>, <code>MovingImage</code>, <code>Sound</code>.
+Defaults to <code>StillImage</code>.</dd>
+<dt><strong><code>license_info</code></strong> :&ensp;<code>bool</code></dt>
+<dd>retrieve images license information. Default to True.</dd>
+<dt><strong><code>one_media_per_occurrence</code></strong> :&ensp;<code>bool</code></dt>
+<dd>only retrieve one media in multiple media occurrences. Default to True,</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Iterable</code></dt>
+<dd>generate-like object, that yields dictionaries</dd>
+</dl></div>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="gbif_dl.generators" href="index.html">gbif_dl.generators</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="gbif_dl.generators.api.gbif_count" href="#gbif_dl.generators.api.gbif_count">gbif_count</a></code></li>
+<li><code><a title="gbif_dl.generators.api.gbif_query_generator" href="#gbif_dl.generators.api.gbif_query_generator">gbif_query_generator</a></code></li>
+<li><code><a title="gbif_dl.generators.api.generate_urls" href="#gbif_dl.generators.api.generate_urls">generate_urls</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.11.0</a>.</p>
+</footer>
+</body>
+</html>
